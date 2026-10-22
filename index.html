@@ -98,7 +98,7 @@ textarea.mono { font-family: var(--f-mono); font-size: .86rem; line-height: 1.55
 textarea.code { min-height: 140px; }
 .io { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; }
 @media (max-width: 560px) { .io { grid-template-columns: minmax(0, 1fr); } }
-textarea.io-t { min-height: 84px; }
+textarea.io-t { min-height: 84px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .run-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .note { font-size: .86rem; color: var(--muted); }
 .note.bad { color: var(--bad); } .note.warn { color: var(--warn); }
@@ -188,6 +188,7 @@ aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
       </div>
       <div class="export">
         <button class="primary" id="export-btn" type="button"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2.5V11M4.5 7.5 8 11l3.5-3.5M2.5 13.5h11"/></svg>Download .docx</button>
+        <button id="export-pdf" type="button" style="justify-content:center;padding:11px"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1.5h5.5L13 5v9.5H4z M9.5 1.5V5H13"/></svg>Download PDF</button>
         <div class="status" id="status" role="status"></div>
         <div class="lib" id="lib-state">Loading the Python runner…</div>
       </div>
@@ -233,6 +234,16 @@ function splitHeader(src) {
   const code = lines.slice(i).join("\n").replace(/^\s*\n/, "").replace(/\s+$/, "");
   const question = cleanQuestion(q.join("\n").replace(/^\n+|\n+$/g, ""));
   return { question, code };
+}
+/* Clean a question typed or pasted into the Question box: drop # markers, quotes, and "Q1." labels. */
+function tidyQuestion(q) {
+  let t = normalizeSrc(q).replace(/^\s+|\s+$/g, "");
+  const dq = t.match(/^[rRuU]?("""|''')([\s\S]*?)\1$/);
+  if (dq) t = dedent(dq[2]).replace(/^\n+|\s+$/g, "");
+  const lines = t.split("\n");
+  if (lines.some(l => l.trim()) && lines.filter(l => l.trim()).every(l => /^\s*#/.test(l)))
+    t = lines.map(l => l.replace(/^\s*#+\s?/, "")).filter(l => !/^\s*[-=*#~_]{3,}\s*$/.test(l)).join("\n").replace(/^\n+|\s+$/g, "");
+  return cleanQuestion(t);
 }
 function splitMany(text) {
   return normalizeSrc(text).split(/^[ \t]*#[ \t]*(?:-{3,}|={3,}|%%)[ \t]*$/m).map(t => t.trim()).filter(Boolean);
@@ -330,14 +341,15 @@ function buildDocumentXml(settings, programs) {
     const b = (side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="9AA8B1"/>`;
     let rows = `<w:tr><w:trPr><w:tblHeader/></w:trPr>${cell(1100, para(run("No.", { b: true }), { style: "Cell", jc: "center" }), "E3EAF2")}${cell(CONTENT_W - 1100, para(run("Program", { b: true }), { style: "Cell" }), "E3EAF2")}</w:tr>`;
     programs.forEach((p, idx) => {
-      rows += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(1100, para(run(String(idx + 1)), { style: "Cell", jc: "center" }))}${cell(CONTENT_W - 1100, para(run(firstLine(p.question, 110) || "Program " + (idx + 1)), { style: "Cell" }))}</w:tr>`;
+      rows += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(1100, para(run(String(idx + 1)), { style: "Cell", jc: "center" }))}${cell(CONTENT_W - 1100, para(run(firstLine(tidyQuestion(p.question || ""), 110) || "Program " + (idx + 1)), { style: "Cell" }))}</w:tr>`;
     });
     body += `<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_W}" w:type="dxa"/><w:tblBorders>${b("top")}${b("left")}${b("bottom")}${b("right")}${b("insideH")}${b("insideV")}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr><w:tblGrid><w:gridCol w:w="1100"/><w:gridCol w:w="${CONTENT_W - 1100}"/></w:tblGrid>${rows}</w:tbl>`;
   }
   programs.forEach((p, idx) => {
     body += para(run(`Program ${idx + 1}`), { style: "Heading1", pageBreak: hasCover || idx > 0 });
     body += para(run("Question"), { style: "Label", keepNext: true });
-    body += (p.question || "").trim() ? textParas(p.question, "Question") : para(run("(No question written)", { i: true, color: "8A969E" }), { style: "Question" });
+    const qText = tidyQuestion(p.question || "");
+    body += qText ? textParas(qText, "Question") : para(run("(No question written)", { i: true, color: "8A969E" }), { style: "Question" });
     body += para(run("Code"), { style: "Label", keepNext: true });
     body += boxTable(codeParas(p.code, settings.colour), "F3F6F8");
     body += para(run("Sample Input"), { style: "Label", keepNext: true });
@@ -392,7 +404,145 @@ async function buildDocx(JSZipCtor, settings, programs, outType) {
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Python Practical File Maker</Application></Properties>`);
   return zip.generateAsync({ type: outType || "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", compression: "DEFLATE" });
 }
-if (typeof module !== "undefined") module.exports = { splitHeader, splitMany, highlight, buildDocx };
+/* ---------- PDF builder: same layout as the .docx, drawn with jsPDF ---------- */
+function pdfSafe(s) {
+  return String(s).replace(/[‘’‚′]/g, "'").replace(/[“”„″]/g, '"').replace(/[–—−]/g, "-")
+    .replace(/…/g, "...").replace(/[•●]/g, "-").replace(/ /g, " ").replace(/[^\x09\x0A\x20-\x7E -ÿ]/g, "?");
+}
+function buildPdf(jsPDFCtor, settings, programs) {
+  const doc = new jsPDFCtor({ unit: "pt", format: "a4", compress: true });
+  const title = (settings.title || "").trim() || "Python Practical File";
+  doc.setProperties({ title: pdfSafe(title), creator: "Python Practical File Maker" });
+  const PW = 595.28, PH = 841.89, L = 72, R = PW - 72, W = R - L, TOP = 65, BOTTOM = PH - 72;
+  const COL = { head: "#1E3A5F", accent: "#1E4FA3", ink: "#12202B", muted: "#57666F", grey: "#8A969E", border: "#C9D2D7", foot: "#7A8790" };
+  const CODE_FS = 9.5, CODE_LH = 12.4, CHAR_W = CODE_FS * 0.6, PAD_Y = 5, PAD_X = 8;
+  const MAX_CHARS = Math.floor((W - 2 * PAD_X) / CHAR_W);
+  let y = TOP;
+  const hasCover = !!settings.cover;
+  const newPage = () => { doc.addPage(); y = TOP; };
+  const ensure = (h) => { if (y + h > BOTTOM) newPage(); };
+  const font = (fam, style, size, color) => { doc.setFont(fam, style); doc.setFontSize(size); doc.setTextColor(color); };
+
+  function heading(text, first) {
+    if (!first) newPage();
+    font("helvetica", "bold", 17, COL.head);
+    doc.text(pdfSafe(text), L, y + 15);
+    doc.setDrawColor(COL.accent); doc.setLineWidth(1); doc.line(L, y + 22, R, y + 22);
+    y += 34;
+  }
+  function label(text) {
+    y += 9;
+    ensure(10 + 4 + 2 * PAD_Y + 2 * CODE_LH);
+    font("helvetica", "bold", 9.5, COL.accent);
+    doc.setCharSpace(0.5); doc.text(pdfSafe(text.toUpperCase()), L, y + 8); doc.setCharSpace(0);
+    y += 14;
+  }
+  function textBlock(text, opts = {}) {
+    const size = opts.size || 12, lh = size * 1.32;
+    font("helvetica", opts.italic ? "italic" : "normal", size, opts.color || COL.ink);
+    normalizeSrc(text).replace(/\s+$/, "").split("\n").forEach(par => {
+      const lines = par.trim() ? doc.splitTextToSize(pdfSafe(par), W) : [""];
+      lines.forEach(line => { ensure(lh); doc.text(line, L, y + size * 0.9); y += lh; });
+      y += 2;
+    });
+  }
+  // Turn code into display lines of coloured runs, wrapping long lines at the box width.
+  function codeLines(text, colour) {
+    const src = normalizeSrc(text).replace(/\s+$/, "");
+    const raw = !src ? [[]] : colour ? highlight(src) : src.split("\n").map(l => l ? [{ t: l, k: "" }] : []);
+    const out = [];
+    raw.forEach(line => {
+      let cur = [], len = 0;
+      line.forEach(tok => {
+        let t = tok.t;
+        while (t.length) {
+          const room = MAX_CHARS - len;
+          if (room <= 0) { out.push(cur); cur = []; len = 0; continue; }
+          const piece = t.slice(0, room);
+          cur.push({ t: piece, k: tok.k }); len += piece.length; t = t.slice(room);
+        }
+      });
+      out.push(cur);
+    });
+    return out;
+  }
+  function box(lines, fill) {
+    let i = 0;
+    if (!lines.length) lines = [[]];
+    while (i < lines.length) {
+      const fit = Math.floor((BOTTOM - y - 2 * PAD_Y) / CODE_LH);
+      const left = lines.length - i;
+      if (fit < 1 || (fit < 3 && left > fit)) { newPage(); continue; }
+      const n = Math.min(fit, left);
+      const h = n * CODE_LH + 2 * PAD_Y;
+      doc.setFillColor(fill); doc.setDrawColor(COL.border); doc.setLineWidth(0.5);
+      doc.rect(L, y, W, h, "FD");
+      for (let j = 0; j < n; j++) {
+        const base = y + PAD_Y + j * CODE_LH + (CODE_LH - CODE_FS) / 2 + CODE_FS * 0.8;
+        let col = 0;
+        lines[i + j].forEach(run => {
+          font("courier", run.k === "com" ? "italic" : "normal", CODE_FS, run.k ? "#" + DOCX_COLOURS[run.k] : COL.ink);
+          doc.text(pdfSafe(run.t), L + PAD_X + col * CHAR_W, base);
+          col += run.t.length;
+        });
+      }
+      y += h; i += n;
+      if (i < lines.length) newPage();
+    }
+  }
+
+  if (hasCover) {
+    y = TOP + 95;
+    font("helvetica", "bold", 28, COL.head);
+    doc.splitTextToSize(pdfSafe(title), W).forEach(l => { doc.text(l, PW / 2, y + 24, { align: "center" }); y += 34; });
+    y += 6;
+    const sub = (settings.subtitle || "").trim();
+    if (sub) { font("helvetica", "normal", 14, "#44525C"); sub.split("\n").forEach(l => { doc.text(pdfSafe(l.trim()), PW / 2, y + 12, { align: "center" }); y += 19; }); }
+    y += 45;
+    font("helvetica", "bold", 15, COL.head); doc.text("Index", L, y + 13); y += 24;
+    const C1 = 55, FS = 10.5, LH = 13.5, CP = 6;
+    const drawRow = (no, txt, header) => {
+      font("helvetica", header ? "bold" : "normal", FS, COL.ink);
+      const lines = doc.splitTextToSize(pdfSafe(txt), W - C1 - 2 * CP);
+      const h = lines.length * LH + 8;
+      if (y + h > BOTTOM) { newPage(); drawRow("No.", "Program", true); font("helvetica", "normal", FS, COL.ink); }
+      doc.setDrawColor("#9AA8B1"); doc.setLineWidth(0.5);
+      if (header) { doc.setFillColor("#E3EAF2"); doc.rect(L, y, W, h, "FD"); } else doc.rect(L, y, W, h, "S");
+      doc.line(L + C1, y, L + C1, y + h);
+      font("helvetica", header ? "bold" : "normal", FS, COL.ink);
+      doc.text(no, L + C1 / 2, y + 4 + FS * 0.9, { align: "center" });
+      lines.forEach((l, k) => doc.text(l, L + C1 + CP, y + 4 + FS * 0.9 + k * LH));
+      y += h;
+    };
+    drawRow("No.", "Program", true);
+    programs.forEach((p, idx) => drawRow(String(idx + 1), firstLine(tidyQuestion(p.question || ""), 110) || "Program " + (idx + 1), false));
+  }
+
+  programs.forEach((p, idx) => {
+    heading(`Program ${idx + 1}`, !hasCover && idx === 0);
+    label("Question");
+    const qText = tidyQuestion(p.question || "");
+    if (qText) textBlock(qText); else textBlock("(No question written)", { italic: true, color: COL.grey });
+    label("Code");
+    box(codeLines(p.code, settings.colour), "#F3F6F8");
+    label("Sample Input");
+    if ((p.input || "").trim()) box(codeLines(p.input, false), "#FFFFFF");
+    else textBlock("No input needed.", { italic: true, color: COL.muted });
+    label("Sample Output");
+    box(codeLines(p.output || "", false), "#FFFFFF");
+  });
+
+  const total = doc.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    if (hasCover && i === 1) continue;
+    doc.setPage(i);
+    font("helvetica", "normal", 9, COL.foot);
+    doc.text(pdfSafe(title), L, PH - 40);
+    doc.text("Page " + i, R, PH - 40, { align: "right" });
+  }
+  return doc.output("arraybuffer");
+}
+if (typeof module !== "undefined") module.exports = { splitHeader, splitMany, highlight, buildDocx, tidyQuestion, buildPdf };
 </script>
 
 <script>
@@ -503,6 +653,7 @@ function statusOf(p) {
   if (!p.code.trim()) return { cls: "warn", text: "No code" };
   if (p.ranKey !== keyOf(p)) return p.output ? { cls: "warn", text: "Edited — run again" } : { cls: "idle", text: "Not run yet" };
   if (p.error) return { cls: "bad", text: "Error" };
+  if (/^\s*#/.test(p.question)) return { cls: "warn", text: "Tidy question" };
   if (p.starved) return { cls: "warn", text: "Needs more input" };
   if (!p.question.trim()) return { cls: "warn", text: "No question" };
   return { cls: "ok", text: "Ready" };
@@ -550,7 +701,7 @@ function buildCard(p) {
   ]);
   const q = el("textarea", { class: "q", id: "q-" + id, rows: "2", placeholder: "Write the question, e.g. Write a program to find the largest of three numbers." });
   const code = el("textarea", { class: "mono code", id: "code-" + id, spellcheck: "false", placeholder: "# Your Python code" });
-  const inp = el("textarea", { class: "mono io-t", id: "in-" + id, spellcheck: "false", placeholder: "One line for each input()" });
+  const inp = el("textarea", { class: "mono io-t", id: "in-" + id, spellcheck: "false", placeholder: "Just the values you\u2019d type, one per line\ne.g.\n12\n30" });
   const out = el("textarea", { class: "mono io-t", id: "out-" + id, spellcheck: "false", placeholder: "Press Run to fill this in" });
   const inHint = el("em");
   const runBtn = el("button", { type: "button", onclick: () => runProgram(p) });
@@ -559,7 +710,17 @@ function buildCard(p) {
 
   q.value = p.question; code.value = p.code; inp.value = p.input; out.value = p.output;
   q.addEventListener("input", () => { p.question = q.value; autosize(q); changed(p); });
-  code.addEventListener("input", () => { p.code = code.value; autosize(code); changed(p); });
+  q.addEventListener("blur", () => { const t = tidyQuestion(q.value); if (t !== q.value.trim()) { q.value = t; p.question = t; autosize(q); changed(p); } });
+  let pasted = false;
+  code.addEventListener("paste", () => { pasted = true; });
+  code.addEventListener("input", () => {
+    if (pasted && !p.question.trim()) {
+      const sp = splitHeader(code.value);
+      if (sp.question) { q.value = sp.question; p.question = sp.question; code.value = sp.code; autosize(q); }
+    }
+    pasted = false;
+    p.code = code.value; autosize(code); changed(p);
+  });
   inp.addEventListener("input", () => { p.input = inp.value; autosize(inp); changed(p); });
   out.addEventListener("input", () => { p.output = out.value; p.ranKey = keyOf(p); p.error = false; p.starved = false; autosize(out); changed(p); });
   code.addEventListener("keydown", tabKeys);
@@ -594,7 +755,9 @@ function refreshCard(p) {
   c.runBtn.disabled = p.running || !p.code.trim();
   c.runBtn.querySelector("span").textContent = p.running ? "Running…" : "Run";
   let note = "", cls = "note";
-  if (p.ranKey === keyOf(p) && p.starved) { note = "The program asked for more input than you gave. Add another line to Sample input and run again."; cls += " warn"; }
+  const looksAssigned = /^\s*[A-Za-z_]\w*\s*=/m.test(p.input);
+  if (p.ranKey === keyOf(p) && p.error && looksAssigned && /ValueError/.test(p.output)) { note = "Sample input should hold only the values you\u2019d type, like 12, not a=12. Remove the \u201ca=\u201d parts and run again."; cls += " bad"; }
+  else if (p.ranKey === keyOf(p) && p.starved) { note = "The program asked for more input than you gave. Add another line to Sample input and run again."; cls += " warn"; }
   else if (p.ranKey === keyOf(p) && p.error) { note = "The program stopped with an error. Fix the code, or keep the error if that's what you want to show."; cls += " bad"; }
   else if (p.ranKey !== keyOf(p) && p.output) { note = "Code or input changed since the last run. Downloading will run it again."; cls += " warn"; }
   else if (k && !p.input.trim()) { note = "This program uses input(). Type what you'd enter, one line per input()."; cls += " warn"; }
@@ -738,13 +901,26 @@ function refreshPanel() {
   ps.forEach((p, i) => kids.push(miniPage(p, i + 1)));
   strip.replaceChildren(...kids);
   $("export-btn").disabled = !ps.length || exporting;
+  $("export-pdf").disabled = !ps.length || exporting;
 }
 
 /* ---------- Export ---------- */
 let exporting = false;
 function setStatus(msg, cls) { $("status").textContent = msg; $("status").className = "status" + (cls ? " " + cls : ""); }
 function slug(s) { return (s || "Python Practical File").replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, " ").trim().slice(0, 80) || "Python Practical File"; }
-$("export-btn").addEventListener("click", async () => {
+let pdfReady = null;
+function ensurePdfLib() {
+  if (!pdfReady) pdfReady = loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js").catch(e => { pdfReady = null; throw e; });
+  return pdfReady;
+}
+async function saveFile(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return { status: "saved" };
+}
+async function exportAs(kind) {
   if (exporting || !state.programs.length) return;
   exporting = true; refreshPanel();
   try {
@@ -753,14 +929,18 @@ $("export-btn").addEventListener("click", async () => {
       setStatus(`Running ${stale.length} program${stale.length > 1 ? "s" : ""} to fill in the output…`);
       for (const p of stale) await runProgram(p);
     }
-    setStatus("Building the Word file…");
-    const blob = await buildDocx(window.JSZip, state.settings, state.programs.map(p => ({ question: p.question, code: p.code, input: p.input, output: p.output })), "blob");
-    const filename = slug(state.settings.title) + ".docx";
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    const res = { status: "saved" };
+    const progs = state.programs.map(p => ({ question: p.question, code: p.code, input: p.input, output: p.output }));
+    let blob;
+    if (kind === "pdf") {
+      setStatus("Building the PDF…");
+      try { await ensurePdfLib(); } catch (e) { setStatus("The PDF maker couldn't load. Check your internet connection and try again.", "bad"); return; }
+      blob = new Blob([buildPdf(window.jspdf.jsPDF, state.settings, progs)], { type: "application/pdf" });
+    } else {
+      setStatus("Building the Word file…");
+      blob = await buildDocx(window.JSZip, state.settings, progs, "blob");
+    }
+    const res = await saveFile(blob, slug(state.settings.title) + "." + kind);
+    if (!res) return;
     const issues = state.programs.filter(p => statusOf(p).cls !== "ok").length;
     setStatus(res.status === "delivered" ? "Sent." : (issues ? `Saved. ${issues} program${issues > 1 ? "s" : ""} still need${issues > 1 ? "" : "s"} a look, marked on the left.` : "Saved. Each program is on its own page."), "ok");
   } catch (e) {
@@ -770,7 +950,9 @@ $("export-btn").addEventListener("click", async () => {
     else if (code) setStatus("The file couldn't be saved here (" + code + ").", "bad");
     else setStatus("Something went wrong while building the file: " + (e?.message || e), "bad");
   } finally { exporting = false; refreshPanel(); }
-});
+}
+$("export-btn").addEventListener("click", () => exportAs("docx"));
+$("export-pdf").addEventListener("click", () => exportAs("pdf"));
 
 /* ---------- Boot ---------- */
 load();
