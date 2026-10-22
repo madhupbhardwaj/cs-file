@@ -133,10 +133,115 @@ aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--r); display: flex; gap: 12px; align-items: center; font-size: .93rem; z-index: 20; max-width: calc(100% - 32px); }
 .toast button { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 40%, transparent); padding: 6px 10px; }
 @media (prefers-reduced-motion: reduce) { .sheet.flash { animation: none; } }
+/* ---------- Opening animation: one deliberate dark look, same in both themes ---------- */
+#intro { position: fixed; inset: 0; z-index: 100; background: #0D1828; color: #EAF0F6; overflow: hidden; display: grid; place-items: center; cursor: pointer;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+html.intro-on, html.intro-on body { overflow: hidden; }
+.intro-rule { position: absolute; left: 0; right: 0; height: 1px; background: rgb(130 168 242 / .17); transform: scaleX(0); transform-origin: left center; }
+.intro-margin { position: absolute; top: 0; bottom: 0; left: clamp(26px, 9vw, 120px); width: 2px; background: #E06B7E; transform: scaleY(0); transform-origin: top center; }
+.intro-center { position: relative; display: grid; gap: 14px; max-width: 100%; }
+.intro-term { font: 500 clamp(.9rem, 2.3vw, 1.2rem)/1.4 var(--f-mono); color: #A9BBD0; white-space: nowrap; min-height: 1.4em; }
+.intro-term .p { color: #E06B7E; }
+.intro-term .b { color: #8DB6F5; } .intro-term .s { color: #8FD19A; }
+.intro-caret { display: inline-block; width: .55em; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; background: #EAF0F6; animation: caret .9s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.intro-by { font: 600 clamp(.8rem, 1.8vw, 1rem)/1 var(--f-body); letter-spacing: .32em; text-transform: uppercase; color: #A9BBD0; opacity: 0; margin-top: 18px; }
+.intro-name { font: 700 clamp(3.4rem, 15vw, 9rem)/.95 var(--f-display); letter-spacing: -0.035em; display: flex; }
+.intro-name .m { display: inline-block; overflow: hidden; padding-bottom: .08em; }
+.intro-name .m span { display: inline-block; transform: translateY(110%); }
+.intro-under { height: clamp(4px, .7vw, 7px); background: #82A8F2; transform: scaleX(0); transform-origin: left center; border-radius: 2px; }
+.intro-skip { position: absolute; right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); font: 500 .8rem var(--f-mono); color: #6F8299; letter-spacing: .06em; }
 </style>
 <style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
+
+<div id="intro" aria-hidden="true">
+  <div class="intro-margin"></div>
+  <div class="intro-center">
+    <div class="intro-term"><span class="p">&gt;&gt;&gt;</span> <span id="intro-typed"></span><span class="intro-caret"></span></div>
+    <div class="intro-by">Built by</div>
+    <div class="intro-name" id="intro-name"></div>
+    <div class="intro-under"></div>
+  </div>
+  <div class="intro-skip">click to skip</div>
+</div>
+<script>
+(function () {
+  const root = document.getElementById("intro");
+  if (!root) return;
+  const html = document.documentElement;
+  html.classList.add("intro-on");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const NAME = "Madhup";
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  let skipped = false, leaving = false;
+
+  // Notebook rules across the whole screen
+  const gap = 34, count = Math.ceil(window.innerHeight / gap) + 1;
+  const rules = [];
+  for (let i = 1; i < count; i++) {
+    const r = document.createElement("div");
+    r.className = "intro-rule"; r.style.top = (i * gap) + "px";
+    root.insertBefore(r, root.firstChild); rules.push(r);
+  }
+  const margin = root.querySelector(".intro-margin");
+  const typed = document.getElementById("intro-typed");
+  const caret = root.querySelector(".intro-caret");
+  const by = root.querySelector(".intro-by");
+  const under = root.querySelector(".intro-under");
+  const nameEl = document.getElementById("intro-name");
+  const letters = [...NAME].map(ch => { const m = document.createElement("span"); m.className = "m"; const c = document.createElement("span"); c.textContent = ch; m.append(c); nameEl.append(m); return c; });
+  const code = [["b", "print"], ["", "("], ["s", '"Built by ' + NAME + '"'], ["", ")"]];
+
+  function showFinal() {
+    rules.forEach(r => r.style.transform = "scaleX(1)");
+    margin.style.transform = "scaleY(1)";
+    typed.innerHTML = ""; code.forEach(([k, t]) => { const sp = document.createElement("span"); sp.className = k; sp.textContent = t; typed.append(sp); });
+    by.style.opacity = 1; letters.forEach(l => l.style.transform = "none"); under.style.transform = "scaleX(1)";
+  }
+  async function leave(fast) {
+    if (leaving) return; leaving = true;
+    const dur = reduce ? 300 : fast ? 420 : 750;
+    const a = reduce
+      ? root.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur, fill: "forwards" })
+      : root.animate([{ clipPath: "inset(0 0 0 0)" }, { clipPath: "inset(0 0 100% 0)" }], { duration: dur, easing: "cubic-bezier(.75,0,.2,1)", fill: "forwards" });
+    if (!reduce) root.querySelector(".intro-center").animate([{ transform: "none", opacity: 1 }, { transform: "translateY(-60px)", opacity: 0 }], { duration: dur * .8, easing: "cubic-bezier(.6,0,.4,1)", fill: "forwards" });
+    const wrap = document.querySelector(".wrap");
+    if (wrap && !reduce) wrap.animate([{ transform: "translateY(28px)", opacity: .4 }, { transform: "none", opacity: 1 }], { duration: dur + 200, delay: dur * .35, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" });
+    await a.finished.catch(() => {});
+    root.remove(); html.classList.remove("intro-on");
+  }
+  const skip = () => { if (skipped) return; skipped = true; showFinal(); leave(true); };
+  root.addEventListener("click", skip);
+  window.addEventListener("keydown", function onKey(e) { if (!leaving) { skip(); } window.removeEventListener("keydown", onKey); });
+
+  async function play() {
+    if (reduce) { showFinal(); await wait(1100); return leave(); }
+    // wait briefly for the display font so letters don't jump
+    try { await Promise.race([document.fonts.load('700 100px "Familjen Grotesk"'), wait(600)]); } catch (e) {}
+    if (skipped) return;
+    const ease = "cubic-bezier(.2,.75,.15,1)";
+    rules.forEach((r, i) => r.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: 750, delay: i * 22, easing: ease, fill: "forwards" }));
+    margin.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 700, delay: 180, easing: ease, fill: "forwards" });
+    await wait(380);
+    // type print("Built by Madhup")
+    for (const [k, t] of code) {
+      const sp = document.createElement("span"); sp.className = k; typed.append(sp);
+      for (const ch of t) { if (skipped) return; sp.textContent += ch; await wait(30 + Math.random() * 22); }
+    }
+    if (skipped) return;
+    await wait(160);
+    caret.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+    by.animate([{ opacity: 0, transform: "translateY(10px)", letterSpacing: ".6em" }, { opacity: 1, transform: "none", letterSpacing: ".32em" }], { duration: 650, easing: ease, fill: "forwards" });
+    letters.forEach((l, i) => l.animate([{ transform: "translateY(110%) rotate(6deg)" }, { transform: "none" }], { duration: 780, delay: 120 + i * 60, easing: "cubic-bezier(.2,.9,.25,1.08)", fill: "forwards" }));
+    under.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: 700, delay: 120 + letters.length * 60 + 200, easing: "cubic-bezier(.65,0,.25,1)", fill: "forwards" });
+    await wait(120 + letters.length * 60 + 1250);
+    if (!skipped) leave();
+  }
+  play();
+})();
+</script>
 
 <div class="wrap">
   <header class="top">
@@ -653,7 +758,7 @@ function statusOf(p) {
   if (!p.code.trim()) return { cls: "warn", text: "No code" };
   if (p.ranKey !== keyOf(p)) return p.output ? { cls: "warn", text: "Edited — run again" } : { cls: "idle", text: "Not run yet" };
   if (p.error) return { cls: "bad", text: "Error" };
-  if (/^\s*#/.test(p.question)) return { cls: "warn", text: "Tidy question" };
+  if (/^\s*#/.test(p.question)) return { cls: "warn", text: "# in question" };
   if (p.starved) return { cls: "warn", text: "Needs more input" };
   if (!p.question.trim()) return { cls: "warn", text: "No question" };
   return { cls: "ok", text: "Ready" };
@@ -757,6 +862,7 @@ function refreshCard(p) {
   let note = "", cls = "note";
   const looksAssigned = /^\s*[A-Za-z_]\w*\s*=/m.test(p.input);
   if (p.ranKey === keyOf(p) && p.error && looksAssigned && /ValueError/.test(p.output)) { note = "Sample input should hold only the values you\u2019d type, like 12, not a=12. Remove the \u201ca=\u201d parts and run again."; cls += " bad"; }
+  else if (/^\s*#/.test(p.question)) { note = "The question still starts with #. Click in the Question box, then click outside it, and it will be cleaned up."; cls += " warn"; }
   else if (p.ranKey === keyOf(p) && p.starved) { note = "The program asked for more input than you gave. Add another line to Sample input and run again."; cls += " warn"; }
   else if (p.ranKey === keyOf(p) && p.error) { note = "The program stopped with an error. Fix the code, or keep the error if that's what you want to show."; cls += " bad"; }
   else if (p.ranKey !== keyOf(p) && p.output) { note = "Code or input changed since the last run. Downloading will run it again."; cls += " warn"; }
