@@ -11,8 +11,9 @@ Turn your Python programs into a ready-to-submit practical file. Add your code, 
 - **Add programs your way.** Upload `.py` files, drag and drop them, paste code, or type it in.
 - **Questions filled in automatically.** The comment or docstring at the top of each program becomes its question.
 - **Runs your code in the browser.** Sample output is produced by actually running the program with your sample input.
-- **Python IDLE look.** Code appears in an IDLE editor window and output in an IDLE Shell window, using IDLE's own colours.
+- **Python IDLE look, live.** While you edit, code appears in an IDLE editor window and output in an IDLE Shell window, using IDLE's own colours. What you see is what you download.
 - **Word and PDF export.** Each program gets its own page, with an optional cover page and index.
+- **Program list.** The sidebar lists every program with its status, so you can jump to any one.
 - **Saves as you go.** Your programs are kept in your browser between visits.
 - **Private.** Nothing is uploaded; everything happens on your device.
 
@@ -77,13 +78,24 @@ For these programs, run them on your computer and paste the output into **Sample
 - [jsPDF](https://github.com/parallax/jsPDF) to build PDF files
 - [DejaVu Sans Mono](https://dejavu-fonts.github.io) as the code font in PDFs
 
+## Repository contents
+
+| File | Purpose |
+|---|---|
+| `index.html` | The whole app |
+| `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | Site icons |
+| `og-image.png` | Preview image shown when the link is shared |
+| `screenshot.png` | Screenshot used in this README |
+
 ## Running locally
 
 Open `index.html` in any modern browser. An internet connection is needed the first time so the libraries can load.
 
 ## Deploying
 
-The site is a single static file. To host your own copy on Vercel, import this repository, set **Framework Preset** to **Other**, and deploy. Every push to the main branch updates the site.
+The site is static, with no build step. To host your own copy on Vercel, import this repository, set **Framework Preset** to **Other**, and deploy. Every push to the main branch updates the site.
+
+Visitor counts use [Vercel Web Analytics](https://vercel.com/docs/analytics). To see them, open the project in Vercel, go to **Analytics**, and click **Enable**.
 
 ## Author
 
