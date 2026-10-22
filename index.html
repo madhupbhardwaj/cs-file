@@ -140,7 +140,7 @@ aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
 .toast button { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 40%, transparent); padding: 6px 10px; }
 @media (prefers-reduced-motion: reduce) { .sheet.flash { animation: none; } }
 /* ---------- Opening animation: one deliberate dark look, same in both themes ---------- */
-#intro { position: fixed; inset: 0; z-index: 100; background: #0D1828; color: #EAF0F6; overflow: hidden; display: grid; place-items: center; cursor: pointer;
+#intro { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 100; background: #0D1828; color: #EAF0F6; overflow: hidden; display: grid; place-items: center; cursor: pointer;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 html.intro-on, html.intro-on body { overflow: hidden; }
 .intro-rule { position: absolute; left: 0; right: 0; height: 1px; background: rgb(130 168 242 / .17); transform: scaleX(0); transform-origin: left center; }
@@ -263,7 +263,7 @@ html.intro-on, html.intro-on body { overflow: hidden; }
         <label class="btn" for="file-in">
           <svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 11V2.5M4.5 6 8 2.5 11.5 6M2.5 10.5v3h11v-3"/></svg>
           Upload .py files
-          <input type="file" id="file-in" multiple accept=".py,.txt,text/x-python,text/plain">
+          <input type="file" id="file-in" multiple>
         </label>
         <button id="paste-btn" type="button"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="2.5" width="9" height="11.5" rx="1"/><path d="M6 2.5h4v2H6zM6 8h4M6 10.5h4"/></svg>Paste code</button>
         <button id="blank-btn" type="button"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v10M3 8h10"/></svg>Blank program</button>
@@ -449,7 +449,7 @@ function segmentOutput(output, input) {
   const push = (t, k) => { if (!t) return; const l = segs[segs.length - 1]; if (l && l.k === k) l.t += t; else segs.push({ t, k }); };
   const ins = normalizeSrc(input || "").split("\n").filter(v => v !== "");
   let idx = 0, err = false;
-  normalizeSrc(output || "").split(/(?<=\n)/).forEach(L => {
+  (normalizeSrc(output || "").match(/[^\n]*\n|[^\n]+$/g) || []).forEach(L => {
     const body = L.replace(/\n$/, ""), nl = L.endsWith("\n") ? "\n" : "";
     if (!err && /^(Traceback \(most recent call last\)|Stopped: )/.test(body)) err = true;
     if (err) { push(L, "err"); return; }
@@ -1201,7 +1201,7 @@ async function saveFile(blob, filename) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000); // iOS Safari reads the file only after the user taps Download
   return { status: "saved" };
 }
 async function exportAs(kind) {
