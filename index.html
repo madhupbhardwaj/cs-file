@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Python Practical File Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ruled-notebook workbench — program sheets on the left with a red margin rule, a sticky "file" panel on the right that previews each A4 page */
+:root {
+  --bg: #E9EEF0;
+  --sheet: #FFFFFF;
+  --sheet-2: #F4F7F8;
+  --ink: #12202B;
+  --muted: #57666F;
+  --line: #D2DBDF;
+  --accent: #1E4FA3;
+  --accent-ink: #FFFFFF;
+  --margin: #D2475D;
+  --ok: #1D7A4C;
+  --warn: #A86206;
+  --bad: #B3261E;
+  --code-bg: #F3F6F8;
+  --kw: #7B2FA0; --bi: #1A5FB4; --str: #2E7D32; --com: #6B7680; --num: #B45309; --fn: #0E6E7A;
+  --f-display: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E141A; --sheet: #151D25; --sheet-2: #1B252F; --ink: #E3E9EE; --muted: #93A2AD; --line: #283541;
+  --accent: #82A8F2; --accent-ink: #0B1622; --margin: #E06B7E; --ok: #5CC28C; --warn: #E3A54B; --bad: #F08A80;
+  --code-bg: #10171E; --kw: #C99BE6; --bi: #8DB6F5; --str: #8FD19A; --com: #8593A0; --num: #F0B070; --fn: #6FD0DA;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0E141A; --sheet: #151D25; --sheet-2: #1B252F; --ink: #E3E9EE; --muted: #93A2AD; --line: #283541;
+  --accent: #82A8F2; --accent-ink: #0B1622; --margin: #E06B7E; --ok: #5CC28C; --warn: #E3A54B; --bad: #F08A80;
+  --code-bg: #10171E; --kw: #C99BE6; --bi: #8DB6F5; --str: #8FD19A; --com: #8593A0; --num: #F0B070; --fn: #6FD0DA;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
+header.top h1 { font-size: clamp(1.7rem, 3.4vw, 2.3rem); font-weight: 700; line-height: 1.1; }
+header.top h1 span { color: var(--accent); }
+header.top p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } aside.panel { position: static !important; order: -1; } }
+
+button, .btn { font: 600 0.92rem/1 var(--f-body); border-radius: var(--r); border: 1px solid var(--line); background: var(--sheet); color: var(--ink); padding: 9px 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+button:hover, .btn:hover { border-color: var(--accent); }
+button:focus-visible, .btn:focus-within, textarea:focus-visible, input:focus-visible, .page:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.primary:hover { filter: brightness(1.08); }
+button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 7px 8px; }
+button.ghost:hover { color: var(--ink); border-color: var(--line); }
+button:disabled { opacity: .55; cursor: default; }
+.btn input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.btn { position: relative; }
+svg.i { width: 16px; height: 16px; flex: none; }
+
+/* add bar */
+.addbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px; border: 1.5px dashed var(--line); border-radius: var(--r); background: color-mix(in srgb, var(--sheet) 55%, transparent); margin-bottom: 18px; }
+.addbar .hint { color: var(--muted); font-size: .88rem; margin-left: auto; }
+body.dragging .addbar { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--sheet)); }
+.pastebox { background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 18px; display: grid; gap: 10px; }
+.pastebox p { margin: 0; color: var(--muted); font-size: .9rem; }
+.pastebox code { font-family: var(--f-mono); font-size: .85em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: var(--r); background: color-mix(in srgb, var(--warn) 12%, var(--sheet)); border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); margin-bottom: 18px; font-size: .93rem; }
+
+/* program sheets */
+#list { display: grid; gap: 20px; }
+.sheet { position: relative; background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px 18px 44px; display: grid; gap: 12px; min-width: 0; }
+.sheet::before { content: ""; position: absolute; left: 30px; top: 0; bottom: 0; width: 1.5px; background: color-mix(in srgb, var(--margin) 70%, transparent); }
+.sheet.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
+.sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.sheet-head h3 { font-size: 1.15rem; font-weight: 700; }
+.sheet-num { position: absolute; left: 0; top: 16px; width: 30px; text-align: center; font: 600 .8rem/1.3 var(--f-mono); color: var(--margin); }
+.src { font: .8rem var(--f-mono); color: var(--muted); overflow-wrap: anywhere; }
+.chip { font: 600 .74rem/1 var(--f-body); letter-spacing: .04em; text-transform: uppercase; padding: 5px 8px; border-radius: 999px; border: 1px solid currentColor; display: inline-flex; align-items: center; gap: 5px; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); } .chip.idle { color: var(--muted); }
+.chip.ex { color: var(--accent); }
+.chip.ex::before { display: none; }
+.tools { margin-left: auto; display: flex; gap: 2px; flex-wrap: wrap; }
+label.f { display: grid; gap: 5px; min-width: 0; }
+label.f > span { font: 600 .74rem/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+label.f > span em { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 400; }
+textarea, input[type=text] { width: 100%; font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 11px; resize: vertical; }
+textarea.q { min-height: 52px; }
+textarea.mono { font-family: var(--f-mono); font-size: .86rem; line-height: 1.55; background: var(--code-bg); tab-size: 4; white-space: pre; overflow-x: auto; overflow-wrap: normal; }
+textarea.code { min-height: 140px; }
+.io { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; }
+@media (max-width: 560px) { .io { grid-template-columns: minmax(0, 1fr); } }
+textarea.io-t { min-height: 84px; }
+.run-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.note { font-size: .86rem; color: var(--muted); }
+.note.bad { color: var(--bad); } .note.warn { color: var(--warn); }
+
+.empty { background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 28px; text-align: center; color: var(--muted); }
+.empty h3 { color: var(--ink); margin-bottom: 6px; }
+
+/* file panel */
+aside.panel { position: sticky; top: 16px; background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 16px; min-width: 0; }
+aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
+.tally { font: 500 .85rem var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.check { display: flex; gap: 9px; align-items: flex-start; font-size: .93rem; cursor: pointer; }
+.check input { margin-top: 4px; accent-color: var(--accent); }
+.pages { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scroll-snap-type: x proximity; }
+.page { flex: none; width: 74px; aspect-ratio: 210 / 297; max-width: 100%; background: #FFFFFF; border: 1px solid #C9D2D7; border-radius: 2px; padding: 6px 6px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; scroll-snap-align: start; overflow: hidden; color: #12202B; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+.page:hover { border-color: var(--accent); }
+.page b { font: 700 6.5px/1.2 var(--f-display); color: #1E3A5F; }
+.page i { display: block; height: 2px; border-radius: 1px; background: #C4CDD3; flex: none; }
+.page i.k { background: #B99AD0; } .page i.c { background: #D8DDE1; } .page i.s { background: #A7CFAB; }
+.page .box { margin-top: 2px; background: #F1F4F6; border-radius: 1px; padding: 2px; display: flex; flex-direction: column; gap: 1.5px; }
+.page .lbl { font: 600 4.5px/1 var(--f-body); color: #1E3A5F; text-transform: uppercase; margin-top: 2px; }
+.page.cover { justify-content: flex-start; align-items: center; text-align: center; }
+.page.cover b { font-size: 7.5px; margin-top: 10px; }
+.page-cap { font: 500 .72rem var(--f-mono); color: var(--muted); text-align: center; margin-top: 4px; }
+.page-wrap { flex: none; }
+.export { display: grid; gap: 8px; }
+.export button.primary { justify-content: center; padding: 13px; font-size: 1rem; }
+.status { font-size: .88rem; min-height: 1.3em; }
+.status.bad { color: var(--bad); } .status.ok { color: var(--ok); }
+.lib { font-size: .8rem; color: var(--muted); }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--r); display: flex; gap: 12px; align-items: center; font-size: .93rem; z-index: 20; max-width: calc(100% - 32px); }
+.toast button { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 40%, transparent); padding: 6px 10px; }
+@media (prefers-reduced-motion: reduce) { .sheet.flash { animation: none; } }
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Python <span>Practical File</span> Maker</h1>
+      <p>Add your Python programs, run them here to fill in the output, and download a Word file with each program on its own page: question, code, sample input and sample output.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <main style="min-width:0">
+      <div class="addbar" id="addbar">
+        <label class="btn" for="file-in">
+          <svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 11V2.5M4.5 6 8 2.5 11.5 6M2.5 10.5v3h11v-3"/></svg>
+          Upload .py files
+          <input type="file" id="file-in" multiple accept=".py,.txt,text/x-python,text/plain">
+        </label>
+        <button id="paste-btn" type="button"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="2.5" width="9" height="11.5" rx="1"/><path d="M6 2.5h4v2H6zM6 8h4M6 10.5h4"/></svg>Paste code</button>
+        <button id="blank-btn" type="button"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v10M3 8h10"/></svg>Blank program</button>
+        <span class="hint">or drop .py files anywhere</span>
+      </div>
+
+      <div class="pastebox" id="pastebox" hidden>
+        <label class="f" for="paste-ta"><span>Paste one or more programs</span></label>
+        <textarea id="paste-ta" class="mono code" spellcheck="false" placeholder="# Write a program to find the sum of two numbers.&#10;a = int(input(&quot;Enter a: &quot;))&#10;b = int(input(&quot;Enter b: &quot;))&#10;print(&quot;Sum =&quot;, a + b)&#10;#---&#10;# Write a program to print a multiplication table.&#10;..."></textarea>
+        <p>Put a line with only <code>#---</code> between programs. The comment or docstring at the top of each program becomes its question.</p>
+        <div class="row"><button class="primary" id="paste-add" type="button">Add programs</button><button class="ghost" id="paste-cancel" type="button">Cancel</button></div>
+      </div>
+
+      <div class="banner" id="ex-banner" hidden>
+        <span>The programs below are examples so you can see how the file looks.</span>
+        <button id="clear-ex" type="button">Remove examples</button>
+      </div>
+
+      <div id="list"></div>
+    </main>
+
+    <aside class="panel" aria-label="Word file">
+      <div>
+        <h2>Your Word file</h2>
+        <div class="tally" id="tally"></div>
+      </div>
+      <label class="f" for="doc-title"><span>File title</span><input type="text" id="doc-title" placeholder="Python Practical File"></label>
+      <label class="f" for="doc-sub"><span>Name, class, roll no. <em>optional</em></span><textarea id="doc-sub" rows="2" placeholder="Your name · Class XII · Roll no. 14"></textarea></label>
+      <label class="check" for="opt-cover"><input type="checkbox" id="opt-cover" checked><span>Cover page with an index of programs</span></label>
+      <label class="check" for="opt-colour"><input type="checkbox" id="opt-colour" checked><span>Colour the code (keywords, strings, comments)</span></label>
+      <div>
+        <div class="pages" id="pages" aria-label="Page preview"></div>
+      </div>
+      <div class="export">
+        <button class="primary" id="export-btn" type="button"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 2.5V11M4.5 7.5 8 11l3.5-3.5M2.5 13.5h11"/></svg>Download .docx</button>
+        <div class="status" id="status" role="status"></div>
+        <div class="lib" id="lib-state">Loading the Python runner…</div>
+      </div>
+    </aside>
+  </div>
+</div>
+<div class="toast" id="toast" hidden><span id="toast-msg"></span><button id="toast-undo" type="button">Undo</button></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script id="docx-lib">
+/* ---------- Pure helpers: header split, Python highlighter, .docx builder ---------- */
+const PY_KW = new Set("False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield".split(" "));
+const PY_BI = new Set("print input int float str list dict set tuple len range sum min max abs round sorted reversed enumerate zip map filter open type isinstance bool chr ord bin hex oct pow divmod any all format id iter next super object complex frozenset hasattr getattr setattr eval exec help dir vars".split(" "));
+
+function normalizeSrc(s) { return String(s || "").replace(/\r\n?/g, "\n").replace(/\t/g, "    "); }
+
+function cleanQuestion(q) {
+  return q.replace(/^\s*(?:q(?:uestion)?\s*(?:no\.?\s*)?\d*\s*[:.)\-]|program\s*(?:no\.?\s*)?\d*\s*[:.)\-]|\d+\s*[.)])\s*/i, "").trim();
+}
+function dedent(text) {
+  const lines = text.split("\n");
+  const ind = lines.filter(l => l.trim()).reduce((m, l) => Math.min(m, l.match(/^ */)[0].length), Infinity);
+  return lines.map(l => l.slice(Number.isFinite(ind) ? ind : 0)).join("\n");
+}
+/* Split a program into {question, code}: a leading docstring or block of # comments becomes the question. */
+function splitHeader(src) {
+  let s = normalizeSrc(src).replace(/^﻿/, "");
+  const lines = s.split("\n");
+  let i = 0;
+  while (i < lines.length && (/^\s*$/.test(lines[i]) || /^#!/.test(lines[i]) || /^#.*coding[:=]/.test(lines[i]))) i++;
+  const rest = lines.slice(i).join("\n");
+  const doc = rest.match(/^[rRuU]?("""|''')([\s\S]*?)\1[ \t]*(?:\n|$)/);
+  if (doc) {
+    const q = cleanQuestion(dedent(doc[2]).replace(/^\n+|\s+$/g, ""));
+    return { question: q, code: rest.slice(doc[0].length).replace(/^\s*\n/, "").replace(/\s+$/, "") };
+  }
+  const q = [];
+  while (i < lines.length && /^\s*#/.test(lines[i])) {
+    const t = lines[i].replace(/^\s*#+\s?/, "");
+    if (!/^\s*[-=*#~_]{3,}\s*$/.test(t)) q.push(t.replace(/\s+$/, ""));
+    i++;
+  }
+  const code = lines.slice(i).join("\n").replace(/^\s*\n/, "").replace(/\s+$/, "");
+  const question = cleanQuestion(q.join("\n").replace(/^\n+|\n+$/g, ""));
+  return { question, code };
+}
+function splitMany(text) {
+  return normalizeSrc(text).split(/^[ \t]*#[ \t]*(?:-{3,}|={3,}|%%)[ \t]*$/m).map(t => t.trim()).filter(Boolean);
+}
+
+/* Tokenize Python into lines of {t, k} runs. k: kw bi str com num fn or "" */
+function highlight(code) {
+  const re = /(#[^\n]*)|([rRbBuUfF]{0,2}(?:"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)|"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?))|(\b\d[\d_]*\.?\d*(?:[eE][+-]?\d+)?[jJ]?\b|\.\d+\b)|([A-Za-z_]\w*)|(\n)|([^\S\n]+)|([^\w\s#"']+|[\s\S])/y;
+  const lines = [[]];
+  let m, prevName = "";
+  const push = (t, k) => {
+    const parts = t.split("\n");
+    parts.forEach((p, idx) => {
+      if (idx > 0) lines.push([]);
+      if (!p) return;
+      const line = lines[lines.length - 1];
+      const last = line[line.length - 1];
+      if (last && last.k === k) last.t += p; else line.push({ t: p, k });
+    });
+  };
+  re.lastIndex = 0;
+  while (re.lastIndex < code.length && (m = re.exec(code))) {
+    if (m[1]) push(m[1], "com");
+    else if (m[2]) push(m[2], "str");
+    else if (m[3]) push(m[3], "num");
+    else if (m[4]) {
+      const w = m[4];
+      const k = (prevName === "def" || prevName === "class") ? "fn" : PY_KW.has(w) ? "kw" : PY_BI.has(w) ? "bi" : "";
+      push(w, k); prevName = w; continue;
+    }
+    else if (m[5]) push("\n", "");
+    else push(m[0], "");
+    if (!m[6]) prevName = "";
+  }
+  return lines;
+}
+
+function xesc(s) {
+  return String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F￾￿]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const DOCX_COLOURS = { kw: "7B2FA0", bi: "1A5FB4", str: "2E7D32", com: "6B7680", num: "B45309", fn: "0E6E7A" };
+const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+const CONTENT_W = 9026; // A4 width minus 1" margins, in twentieths of a point
+
+function run(text, opts = {}) {
+  let rpr = "";
+  if (opts.b) rpr += "<w:b/>";
+  if (opts.i) rpr += "<w:i/>";
+  if (opts.color) rpr += `<w:color w:val="${opts.color}"/>`;
+  if (opts.sz) rpr += `<w:sz w:val="${opts.sz}"/><w:szCs w:val="${opts.sz}"/>`;
+  return `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ""}<w:t xml:space="preserve">${xesc(text)}</w:t></w:r>`;
+}
+function para(content, { style, jc, pageBreak, keepNext } = {}) {
+  let ppr = "";
+  if (style) ppr += `<w:pStyle w:val="${style}"/>`;
+  if (keepNext) ppr += "<w:keepNext/>";
+  if (pageBreak) ppr += "<w:pageBreakBefore/>";
+  if (jc) ppr += `<w:jc w:val="${jc}"/>`;
+  return `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${content}</w:p>`;
+}
+function boxTable(innerParas, fill) {
+  const b = (side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="C9D2D7"/>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_W}" w:type="dxa"/><w:tblBorders>${b("top")}${b("left")}${b("bottom")}${b("right")}</w:tblBorders>` +
+    `<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="100" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr>` +
+    `<w:tblGrid><w:gridCol w:w="${CONTENT_W}"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>` +
+    (innerParas || para("", { style: "Code" })) + `</w:tc></w:tr></w:tbl>`;
+}
+function codeParas(text, colour) {
+  const src = normalizeSrc(text).replace(/\s+$/, "");
+  if (!src) return para("", { style: "Code" });
+  if (!colour) return src.split("\n").map(l => para(l ? run(l) : "", { style: "Code" })).join("");
+  return highlight(src).map(line => para(line.map(tok => run(tok.t, { color: DOCX_COLOURS[tok.k], i: tok.k === "com" })).join(""), { style: "Code" })).join("");
+}
+function textParas(text, style) {
+  return normalizeSrc(text).replace(/\s+$/, "").split("\n").map(l => para(l ? run(l) : "", { style })).join("");
+}
+
+function firstLine(q, n) {
+  const s = (q || "").replace(/\s+/g, " ").trim();
+  return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
+}
+
+function buildDocumentXml(settings, programs) {
+  const title = (settings.title || "").trim() || "Python Practical File";
+  let body = "";
+  const hasCover = !!settings.cover;
+  if (hasCover) {
+    body += para("", {}) + para("", {});
+    body += para(run(title), { style: "Title", jc: "center" });
+    const sub = (settings.subtitle || "").trim();
+    if (sub) body += sub.split("\n").map(l => para(run(l.trim()), { style: "Subtitle", jc: "center" })).join("");
+    body += para(run("Index"), { style: "IndexHead" });
+    const cell = (w, inner, fill) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ""}<w:vAlign w:val="center"/></w:tcPr>${inner}</w:tc>`;
+    const b = (side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="9AA8B1"/>`;
+    let rows = `<w:tr><w:trPr><w:tblHeader/></w:trPr>${cell(1100, para(run("No.", { b: true }), { style: "Cell", jc: "center" }), "E3EAF2")}${cell(CONTENT_W - 1100, para(run("Program", { b: true }), { style: "Cell" }), "E3EAF2")}</w:tr>`;
+    programs.forEach((p, idx) => {
+      rows += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(1100, para(run(String(idx + 1)), { style: "Cell", jc: "center" }))}${cell(CONTENT_W - 1100, para(run(firstLine(p.question, 110) || "Program " + (idx + 1)), { style: "Cell" }))}</w:tr>`;
+    });
+    body += `<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_W}" w:type="dxa"/><w:tblBorders>${b("top")}${b("left")}${b("bottom")}${b("right")}${b("insideH")}${b("insideV")}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr><w:tblGrid><w:gridCol w:w="1100"/><w:gridCol w:w="${CONTENT_W - 1100}"/></w:tblGrid>${rows}</w:tbl>`;
+  }
+  programs.forEach((p, idx) => {
+    body += para(run(`Program ${idx + 1}`), { style: "Heading1", pageBreak: hasCover || idx > 0 });
+    body += para(run("Question"), { style: "Label", keepNext: true });
+    body += (p.question || "").trim() ? textParas(p.question, "Question") : para(run("(No question written)", { i: true, color: "8A969E" }), { style: "Question" });
+    body += para(run("Code"), { style: "Label", keepNext: true });
+    body += boxTable(codeParas(p.code, settings.colour), "F3F6F8");
+    body += para(run("Sample Input"), { style: "Label", keepNext: true });
+    body += (p.input || "").trim() ? boxTable(codeParas(p.input, false), "FFFFFF") : para(run("No input needed.", { i: true, color: "57666F" }), { style: "Question" });
+    body += para(run("Sample Output"), { style: "Label", keepNext: true });
+    body += boxTable(codeParas(p.output || "", false), "FFFFFF");
+  });
+  body += `<w:sectPr><w:footerReference w:type="default" r:id="rIdFooter1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="1440" w:bottom="1300" w:left="1440" w:header="708" w:footer="600" w:gutter="0"/>${hasCover ? '<w:titlePg/>' : ''}</w:sectPr>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document ${W_NS}><w:body>${body}</w:body></w:document>`;
+}
+
+function stylesXml() {
+  const s = (id, name, ppr, rpr, extra = "") => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/>${extra}<w:qFormat/><w:pPr>${ppr}</w:pPr><w:rPr>${rpr}</w:rPr></w:style>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="23"/><w:szCs w:val="23"/><w:lang w:val="en-IN"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
+${s("Title", "Title", '<w:spacing w:before="1200" w:after="200"/>', '<w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light"/><w:b/><w:color w:val="1E3A5F"/><w:sz w:val="56"/><w:szCs w:val="56"/>')}
+${s("Subtitle", "Subtitle", '<w:spacing w:after="60"/>', '<w:color w:val="44525C"/><w:sz w:val="28"/><w:szCs w:val="28"/>')}
+${s("IndexHead", "Index Heading", '<w:keepNext/><w:spacing w:before="900" w:after="160"/>', '<w:b/><w:color w:val="1E3A5F"/><w:sz w:val="30"/><w:szCs w:val="30"/>')}
+${s("Heading1", "heading 1", '<w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="1E4FA3"/></w:pBdr><w:spacing w:before="0" w:after="160"/><w:outlineLvl w:val="0"/>', '<w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light"/><w:b/><w:color w:val="1E3A5F"/><w:sz w:val="34"/><w:szCs w:val="34"/>')}
+${s("Label", "Section Label", '<w:keepNext/><w:spacing w:before="220" w:after="80"/>', '<w:b/><w:caps/><w:spacing w:val="10"/><w:color w:val="1E4FA3"/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
+${s("Question", "Question", '<w:spacing w:after="40" w:line="276" w:lineRule="auto"/>', '<w:sz w:val="24"/><w:szCs w:val="24"/>')}
+${s("Code", "Code", '<w:spacing w:before="0" w:after="0" w:line="259" w:lineRule="auto"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="19"/><w:szCs w:val="19"/>')}
+${s("Cell", "Table Cell", '<w:spacing w:before="0" w:after="0"/>', '<w:sz w:val="21"/><w:szCs w:val="21"/>')}
+${s("Footer", "footer", '<w:spacing w:after="0"/>', '<w:color w:val="7A8790"/><w:sz w:val="18"/><w:szCs w:val="18"/>')}
+</w:styles>`;
+}
+
+function footerXml(title) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr ${W_NS}><w:p><w:pPr><w:pStyle w:val="Footer"/><w:tabs><w:tab w:val="right" w:pos="${CONTENT_W}"/></w:tabs></w:pPr>${run(title)}<w:r><w:tab/></w:r>${run("Page ")}<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
+}
+
+async function buildDocx(JSZipCtor, settings, programs, outType) {
+  const title = (settings.title || "").trim() || "Python Practical File";
+  const zip = new JSZipCtor();
+  const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`);
+  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`);
+  zip.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`);
+  zip.file("word/settings.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`);
+  zip.file("word/styles.xml", stylesXml());
+  zip.file("word/footer1.xml", footerXml(title));
+  zip.file("word/document.xml", buildDocumentXml(settings, programs));
+  zip.file("docProps/core.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${xesc(title)}</dc:title><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified></cp:coreProperties>`);
+  zip.file("docProps/app.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Python Practical File Maker</Application></Properties>`);
+  return zip.generateAsync({ type: outType || "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", compression: "DEFLATE" });
+}
+if (typeof module !== "undefined") module.exports = { splitHeader, splitMany, highlight, buildDocx };
+</script>
+
+<script>
+/* ---------- App ---------- */
+const $ = (id) => document.getElementById(id);
+const STORE = "pyfile.v1";
+const uid = () => Math.random().toString(36).slice(2, 10);
+const keyOf = (p) => p.code + "\u0000" + p.input;
+
+const EXAMPLES = [
+  { question: "Write a program to input a number and print its factorial.",
+    code: 'n = int(input("Enter a number: "))\nfact = 1\nfor i in range(1, n + 1):\n    fact *= i\nprint("Factorial of", n, "is", fact)',
+    input: "5", output: "Enter a number: 5\nFactorial of 5 is 120\n" },
+  { question: "Write a program to check whether a string entered by the user is a palindrome.",
+    code: 's = input("Enter a string: ")\nif s == s[::-1]:\n    print(s, "is a palindrome")\nelse:\n    print(s, "is not a palindrome")',
+    input: "madam", output: "Enter a string: madam\nmadam is a palindrome\n" },
+  { question: "Write a function that returns the first n terms of the Fibonacci series, and use it to print the series.",
+    code: 'def fibonacci(n):\n    a, b = 0, 1\n    terms = []\n    for _ in range(n):\n        terms.append(a)\n        a, b = b, a + b\n    return terms\n\nn = int(input("How many terms? "))\nprint(*fibonacci(n), sep=", ")',
+    input: "8", output: "How many terms? 8\n0, 1, 1, 2, 3, 5, 8, 13\n" },
+];
+
+let state = { settings: { title: "Python Practical File", subtitle: "", cover: true, colour: true }, programs: [] };
+function makeProgram(o = {}) {
+  const p = { id: uid(), question: "", code: "", input: "", output: "", ranKey: null, error: false, starved: false, running: false, example: false, source: "", ...o };
+  return p;
+}
+function load() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) {}
+  if (saved && Array.isArray(saved.programs)) {
+    state.settings = { ...state.settings, ...saved.settings };
+    state.programs = saved.programs.map(p => makeProgram({ ...p, running: false }));
+  } else {
+    state.programs = EXAMPLES.map(e => { const p = makeProgram({ ...e, example: true }); p.ranKey = keyOf(p); return p; });
+  }
+}
+let saveTimer;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE, JSON.stringify({ settings: state.settings, programs: state.programs.map(({ running, ...p }) => p) })); } catch (e) {}
+  }, 400);
+}
+
+/* ---------- Python runner (Skulpt) ---------- */
+let skReady = null;
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("load")); document.head.appendChild(s); });
+}
+function ensureSkulpt() {
+  if (!skReady) {
+    skReady = loadScript("https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js")
+      .then(() => loadScript("https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"))
+      .then(() => { $("lib-state").textContent = "Programs run in your browser with a built-in Python 3 interpreter."; })
+      .catch(e => { $("lib-state").textContent = "The Python runner couldn't load. You can still type the outputs yourself."; skReady = null; throw e; });
+  }
+  return skReady;
+}
+function friendlyError(e) {
+  let msg = e && e.toString ? e.toString() : String(e);
+  if (/TimeLimitError/.test(msg)) return "Stopped: the program ran for more than 8 seconds. Check for an endless loop, or that every input() has a line in Sample input.";
+  const m = msg.match(/^(\w+(?:Error|Exception)?): ([\s\S]*?) on line (\d+)$/);
+  if (m) return `Traceback (most recent call last):\n  File "<program>", line ${m[3]}\n${m[1]}: ${m[2]}`;
+  return msg;
+}
+let runChain = Promise.resolve();
+function runProgram(p) {
+  const job = runChain.then(() => doRun(p));
+  runChain = job.catch(() => {});
+  return job;
+}
+async function doRun(p) {
+  p.running = true; refreshCard(p);
+  try { await ensureSkulpt(); } catch (e) { p.running = false; refreshCard(p); setStatus("The Python runner couldn't load, so programs can't run here. Type the Sample output by hand instead.", "bad"); return false; }
+  const Sk = window.Sk;
+  const code = p.code, input = p.input;
+  const lines = input.replace(/\r\n?/g, "\n").split("\n");
+  if (lines.length && lines[lines.length - 1] === "" && input.endsWith("\n")) lines.pop();
+  let idx = 0, out = "", starved = false, error = false;
+  Sk.configure({
+    output: (t) => { out += t; },
+    read: (f) => { if (!Sk.builtinFiles || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+    inputfun: (prompt) => { let v = ""; if (idx < lines.length) v = lines[idx++]; else starved = true; out += (prompt || "") + v + "\n"; return v; },
+    inputfunTakesPrompt: true,
+    __future__: Sk.python3,
+    execLimit: 8000,
+    yieldLimit: 200,
+    killableWhile: true, killableFor: true,
+  });
+  try {
+    await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, normalizeSrc(code), true));
+  } catch (e) {
+    error = true;
+    if (out && !out.endsWith("\n")) out += "\n";
+    out += friendlyError(e) + "\n";
+  }
+  p.running = false;
+  p.output = out; p.error = error; p.starved = starved; p.ranKey = keyOf({ code, input });
+  const card = cards.get(p.id);
+  if (card) { card.out.value = p.output; autosize(card.out); }
+  refreshCard(p); refreshPanel(); save();
+  return !error;
+}
+
+/* ---------- Status ---------- */
+function statusOf(p) {
+  if (p.running) return { cls: "idle", text: "Running…" };
+  if (!p.code.trim()) return { cls: "warn", text: "No code" };
+  if (p.ranKey !== keyOf(p)) return p.output ? { cls: "warn", text: "Edited — run again" } : { cls: "idle", text: "Not run yet" };
+  if (p.error) return { cls: "bad", text: "Error" };
+  if (p.starved) return { cls: "warn", text: "Needs more input" };
+  if (!p.question.trim()) return { cls: "warn", text: "No question" };
+  return { cls: "ok", text: "Ready" };
+}
+function countInputs(code) { return (code.match(/\binput\s*\(/g) || []).length; }
+
+/* ---------- Cards ---------- */
+const cards = new Map();
+function autosize(ta) { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight + 2, 640) + "px"; }
+function tabKeys(e) {
+  if (e.key !== "Tab" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  const ta = e.target;
+  e.preventDefault();
+  const s = ta.selectionStart, en = ta.selectionEnd;
+  ta.setRangeText("    ", s, en, "end");
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function el(tag, attrs = {}, kids = []) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const k of [].concat(kids)) if (k) n.append(k);
+  return n;
+}
+const ICON = {
+  up: '<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 13V3M4 7l4-4 4 4"/></svg>',
+  down: '<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M4 9l4 4 4-4"/></svg>',
+  del: '<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"/></svg>',
+  run: '<svg class="i" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.2v9.6L12.6 8z"/></svg>',
+};
+function iconBtn(svg, label, fn) { const b = el("button", { class: "ghost", type: "button", "aria-label": label, title: label, onclick: fn }); b.innerHTML = svg; return b; }
+
+function buildCard(p) {
+  const id = p.id;
+  const num = el("div", { class: "sheet-num" });
+  const h = el("h3");
+  const chip = el("span", { class: "chip idle" });
+  const exChip = el("span", { class: "chip ex", text: "Example" });
+  const src = el("span", { class: "src" });
+  const tools = el("div", { class: "tools" }, [
+    iconBtn(ICON.up, "Move up", () => move(id, -1)),
+    iconBtn(ICON.down, "Move down", () => move(id, 1)),
+    iconBtn(ICON.del, "Delete program", () => removeProgram(id)),
+  ]);
+  const q = el("textarea", { class: "q", id: "q-" + id, rows: "2", placeholder: "Write the question, e.g. Write a program to find the largest of three numbers." });
+  const code = el("textarea", { class: "mono code", id: "code-" + id, spellcheck: "false", placeholder: "# Your Python code" });
+  const inp = el("textarea", { class: "mono io-t", id: "in-" + id, spellcheck: "false", placeholder: "One line for each input()" });
+  const out = el("textarea", { class: "mono io-t", id: "out-" + id, spellcheck: "false", placeholder: "Press Run to fill this in" });
+  const inHint = el("em");
+  const runBtn = el("button", { type: "button", onclick: () => runProgram(p) });
+  runBtn.innerHTML = ICON.run + "<span>Run</span>";
+  const note = el("span", { class: "note" });
+
+  q.value = p.question; code.value = p.code; inp.value = p.input; out.value = p.output;
+  q.addEventListener("input", () => { p.question = q.value; autosize(q); changed(p); });
+  code.addEventListener("input", () => { p.code = code.value; autosize(code); changed(p); });
+  inp.addEventListener("input", () => { p.input = inp.value; autosize(inp); changed(p); });
+  out.addEventListener("input", () => { p.output = out.value; p.ranKey = keyOf(p); p.error = false; p.starved = false; autosize(out); changed(p); });
+  code.addEventListener("keydown", tabKeys);
+
+  const inLabelSpan = el("span", {}, ["Sample input", inHint]);
+  const node = el("article", { class: "sheet", id: "sheet-" + id }, [
+    num,
+    el("div", { class: "sheet-head" }, [h, chip, exChip, src, tools]),
+    el("label", { class: "f", for: "q-" + id }, [el("span", { text: "Question" }), q]),
+    el("label", { class: "f", for: "code-" + id }, [el("span", { text: "Code" }), code]),
+    el("div", { class: "io" }, [
+      el("label", { class: "f", for: "in-" + id }, [inLabelSpan, inp]),
+      el("label", { class: "f", for: "out-" + id }, [el("span", { text: "Sample output" }), out]),
+    ]),
+    el("div", { class: "run-row" }, [runBtn, note]),
+  ]);
+  const c = { node, num, h, chip, exChip, src, q, code, inp, out, inHint, runBtn, note };
+  cards.set(id, c);
+  return c;
+}
+function refreshCard(p) {
+  const c = cards.get(p.id); if (!c) return;
+  const n = state.programs.indexOf(p) + 1;
+  c.num.textContent = String(n).padStart(2, "0");
+  c.h.textContent = "Program " + n;
+  const st = statusOf(p);
+  c.chip.className = "chip " + st.cls; c.chip.textContent = st.text;
+  c.exChip.hidden = !p.example;
+  c.src.textContent = p.source || ""; c.src.hidden = !p.source;
+  const k = countInputs(p.code);
+  c.inHint.textContent = k ? `${k} input() call${k > 1 ? "s" : ""}` : "no input() calls";
+  c.runBtn.disabled = p.running || !p.code.trim();
+  c.runBtn.querySelector("span").textContent = p.running ? "Running…" : "Run";
+  let note = "", cls = "note";
+  if (p.ranKey === keyOf(p) && p.starved) { note = "The program asked for more input than you gave. Add another line to Sample input and run again."; cls += " warn"; }
+  else if (p.ranKey === keyOf(p) && p.error) { note = "The program stopped with an error. Fix the code, or keep the error if that's what you want to show."; cls += " bad"; }
+  else if (p.ranKey !== keyOf(p) && p.output) { note = "Code or input changed since the last run. Downloading will run it again."; cls += " warn"; }
+  else if (k && !p.input.trim()) { note = "This program uses input(). Type what you'd enter, one line per input()."; cls += " warn"; }
+  c.note.textContent = note; c.note.className = cls;
+}
+function changed(p) {
+  if (p.example) { p.example = false; refreshExamples(); }
+  refreshCard(p); refreshPanel(); save();
+}
+function renderList() {
+  const list = $("list");
+  const ids = new Set(state.programs.map(p => p.id));
+  for (const [id, c] of cards) if (!ids.has(id)) { c.node.remove(); cards.delete(id); }
+  if (!state.programs.length) {
+    list.replaceChildren(el("div", { class: "empty" }, [el("h3", { text: "No programs yet" }), el("p", { text: "Upload your .py files, paste code, or start a blank program. Each one becomes a page in the Word file." })]));
+  } else {
+    const nodes = state.programs.map(p => (cards.get(p.id) || buildCard(p)).node);
+    list.replaceChildren(...nodes);
+    state.programs.forEach(p => { refreshCard(p); const c = cards.get(p.id); [c.q, c.code, c.inp, c.out].forEach(autosize); });
+  }
+  refreshExamples(); refreshPanel();
+}
+function refreshExamples() { $("ex-banner").hidden = !state.programs.some(p => p.example); }
+
+/* ---------- Actions ---------- */
+let undo = null, toastTimer;
+function toast(msg, undoFn) {
+  $("toast-msg").textContent = msg; $("toast").hidden = false; undo = undoFn || null; $("toast-undo").hidden = !undoFn;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; undo = null; }, 6000);
+}
+$("toast-undo").addEventListener("click", () => { if (undo) undo(); $("toast").hidden = true; undo = null; });
+function removeProgram(id) {
+  const i = state.programs.findIndex(p => p.id === id); if (i < 0) return;
+  const [p] = state.programs.splice(i, 1);
+  renderList(); save();
+  toast(`Deleted Program ${i + 1}.`, () => { state.programs.splice(i, 0, p); renderList(); save(); });
+}
+function move(id, d) {
+  const i = state.programs.findIndex(p => p.id === id), j = i + d;
+  if (i < 0 || j < 0 || j >= state.programs.length) return;
+  [state.programs[i], state.programs[j]] = [state.programs[j], state.programs[i]];
+  renderList(); save();
+  cards.get(id).node.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+function addPrograms(list, focusFirst) {
+  if (!list.length) return;
+  const added = list.map(o => makeProgram(o));
+  state.programs.push(...added);
+  renderList(); save();
+  const first = cards.get(added[0].id);
+  first.node.scrollIntoView({ block: "start", behavior: "smooth" });
+  if (focusFirst) (first.q.value ? first.code : first.q).focus({ preventScroll: true });
+  first.node.classList.remove("flash"); void first.node.offsetWidth; first.node.classList.add("flash");
+  // Run new programs that don't need input straight away
+  added.forEach(p => { if (p.code.trim() && !countInputs(p.code)) runProgram(p); });
+  toast(added.length === 1 ? "Added 1 program." : `Added ${added.length} programs.`);
+}
+function fromSource(text, source) { const { question, code } = splitHeader(text); return { question, code, source }; }
+
+$("blank-btn").addEventListener("click", () => addPrograms([{}], true));
+$("paste-btn").addEventListener("click", () => { $("pastebox").hidden = false; $("paste-ta").focus(); });
+$("paste-cancel").addEventListener("click", () => { $("pastebox").hidden = true; });
+$("paste-ta").addEventListener("keydown", tabKeys);
+$("paste-add").addEventListener("click", () => {
+  const parts = splitMany($("paste-ta").value);
+  if (!parts.length) { $("paste-ta").focus(); return; }
+  addPrograms(parts.map(t => fromSource(t, "")));
+  $("paste-ta").value = ""; $("pastebox").hidden = true;
+});
+async function readFiles(files) {
+  const arr = [...files].filter(f => /\.(py|txt|pyw)$/i.test(f.name) || /python|text\/plain/.test(f.type));
+  if (!arr.length) { toast("Only .py or .txt files can be added."); return; }
+  arr.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+  const out = [];
+  for (const f of arr) {
+    const text = await f.text();
+    const parts = splitMany(text);
+    (parts.length ? parts : [""]).forEach((t, i) => out.push(fromSource(t, parts.length > 1 ? `${f.name} (${i + 1})` : f.name)));
+  }
+  addPrograms(out);
+}
+$("file-in").addEventListener("change", (e) => { readFiles(e.target.files); e.target.value = ""; });
+let dragDepth = 0;
+window.addEventListener("dragenter", (e) => { if ([...(e.dataTransfer?.types || [])].includes("Files")) { dragDepth++; document.body.classList.add("dragging"); } });
+window.addEventListener("dragleave", () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove("dragging"); });
+window.addEventListener("dragover", (e) => { if ([...(e.dataTransfer?.types || [])].includes("Files")) e.preventDefault(); });
+window.addEventListener("drop", (e) => { if (!e.dataTransfer?.files?.length) return; e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging"); readFiles(e.dataTransfer.files); });
+$("clear-ex").addEventListener("click", () => {
+  const kept = state.programs.filter(p => !p.example);
+  const removed = state.programs;
+  state.programs = kept; renderList(); save();
+  toast("Removed the examples.", () => { state.programs = removed; renderList(); save(); });
+});
+
+/* ---------- Panel ---------- */
+function bindSetting(id, key, prop) {
+  const n = $(id);
+  n[prop] = state.settings[key];
+  n.addEventListener(prop === "checked" ? "change" : "input", () => { state.settings[key] = n[prop]; refreshPanel(); save(); });
+}
+function miniPage(p, n) {
+  const page = el("div", { class: "page", tabindex: "0", role: "button", "aria-label": `Go to Program ${n}` });
+  page.append(el("b", { text: `Program ${n}` }));
+  const q = (p.question || "").trim();
+  const qLines = Math.max(1, Math.min(3, Math.ceil(q.length / 55)));
+  for (let i = 0; i < qLines; i++) page.append(el("i", { style: `width:${i === qLines - 1 && qLines > 1 ? 55 : 92}%` }));
+  page.append(el("span", { class: "lbl", text: "Code" }));
+  const box = el("div", { class: "box" });
+  const lines = normalizeSrc(p.code).split("\n").slice(0, 22);
+  lines.forEach(l => {
+    const t = l.trimStart(); const ind = l.length - t.length;
+    const cls = /^#/.test(t) ? "c" : /^(def|class|for|while|if|elif|else|try|except|return|import|from)\b/.test(t) ? "k" : /^["']/.test(t) ? "s" : "";
+    box.append(el("i", { class: cls, style: `margin-left:${Math.min(ind, 16) * 2.2}%;width:${t ? Math.max(8, Math.min(t.length, 46) * 2) : 0}%` }));
+  });
+  page.append(box);
+  page.append(el("span", { class: "lbl", text: "Input / Output" }));
+  const ob = el("div", { class: "box" });
+  normalizeSrc(p.output).split("\n").filter(Boolean).slice(0, 4).forEach(l => ob.append(el("i", { style: `width:${Math.max(8, Math.min(l.length, 46) * 2)}%` })));
+  if (!ob.children.length) ob.append(el("i", { style: "width:0" }));
+  page.append(ob);
+  const go = () => { const c = cards.get(p.id); if (!c) return; c.node.scrollIntoView({ block: "start", behavior: "smooth" }); c.node.classList.remove("flash"); void c.node.offsetWidth; c.node.classList.add("flash"); };
+  page.addEventListener("click", go);
+  page.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  return el("div", { class: "page-wrap" }, [page, el("div", { class: "page-cap", text: `p. ${n}` })]);
+}
+function refreshPanel() {
+  const ps = state.programs;
+  const attention = ps.filter(p => statusOf(p).cls !== "ok").length;
+  const pages = ps.length + (state.settings.cover && ps.length ? 1 : 0);
+  $("tally").textContent = ps.length
+    ? `${ps.length} program${ps.length > 1 ? "s" : ""} · ${pages}+ pages${attention ? ` · ${attention} need${attention > 1 ? "" : "s"} a look` : " · all ready"}`
+    : "No programs yet";
+  const strip = $("pages");
+  const kids = [];
+  if (state.settings.cover && ps.length) {
+    const cv = el("div", { class: "page cover", "aria-hidden": "true" }, [el("b", { text: state.settings.title || "Python Practical File" })]);
+    cv.append(el("span", { class: "lbl", text: "Index", style: "margin-top:10px" }));
+    ps.slice(0, 12).forEach(() => cv.append(el("i", { style: "width:86%;background:#DCE3E8" })));
+    kids.push(el("div", { class: "page-wrap" }, [cv, el("div", { class: "page-cap", text: "cover" })]));
+  }
+  ps.forEach((p, i) => kids.push(miniPage(p, i + 1)));
+  strip.replaceChildren(...kids);
+  $("export-btn").disabled = !ps.length || exporting;
+}
+
+/* ---------- Export ---------- */
+let exporting = false;
+function setStatus(msg, cls) { $("status").textContent = msg; $("status").className = "status" + (cls ? " " + cls : ""); }
+function slug(s) { return (s || "Python Practical File").replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, " ").trim().slice(0, 80) || "Python Practical File"; }
+$("export-btn").addEventListener("click", async () => {
+  if (exporting || !state.programs.length) return;
+  exporting = true; refreshPanel();
+  try {
+    const stale = state.programs.filter(p => p.code.trim() && p.ranKey !== keyOf(p));
+    if (stale.length) {
+      setStatus(`Running ${stale.length} program${stale.length > 1 ? "s" : ""} to fill in the output…`);
+      for (const p of stale) await runProgram(p);
+    }
+    setStatus("Building the Word file…");
+    const blob = await buildDocx(window.JSZip, state.settings, state.programs.map(p => ({ question: p.question, code: p.code, input: p.input, output: p.output })), "blob");
+    const filename = slug(state.settings.title) + ".docx";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const res = { status: "saved" };
+    const issues = state.programs.filter(p => statusOf(p).cls !== "ok").length;
+    setStatus(res.status === "delivered" ? "Sent." : (issues ? `Saved. ${issues} program${issues > 1 ? "s" : ""} still need${issues > 1 ? "" : "s"} a look, marked on the left.` : "Saved. Each program is on its own page."), "ok");
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "declined") setStatus("Download cancelled.");
+    else if (code === "rate_limited") setStatus("A save prompt is already open. Finish that one first.", "bad");
+    else if (code) setStatus("The file couldn't be saved here (" + code + ").", "bad");
+    else setStatus("Something went wrong while building the file: " + (e?.message || e), "bad");
+  } finally { exporting = false; refreshPanel(); }
+});
+
+/* ---------- Boot ---------- */
+load();
+bindSetting("doc-title", "title", "value");
+bindSetting("doc-sub", "subtitle", "value");
+bindSetting("opt-cover", "cover", "checked");
+bindSetting("opt-colour", "colour", "checked");
+renderList();
+ensureSkulpt().catch(() => {});
+</script>
+
+</body>
+</html>
