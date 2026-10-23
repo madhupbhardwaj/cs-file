@@ -15,7 +15,8 @@ Turn your Python programs into a ready-to-submit practical file. Add your code, 
 - **Word and PDF export.** Choose one program per page, or two per page to save paper. An optional cover page lists every program.
 - **Program list.** The sidebar lists every program with its status, so you can jump to any one.
 - **Saves as you go.** Your programs are kept in your browser between visits.
-- **Private.** Nothing is uploaded; everything happens on your device.
+- **Private.** Your programs stay on your device. Nothing is uploaded unless you send feedback and choose to attach them.
+- **Feedback button.** Report a problem or suggest an idea from inside the site. Error messages include a **Report this problem** link.
 
 ## How to use
 
@@ -77,12 +78,14 @@ For these programs, run them on your computer and paste the output into **Sample
 - [JSZip](https://github.com/Stuk/jszip) to build `.docx` files
 - [jsPDF](https://github.com/parallax/jsPDF) to build PDF files
 - [DejaVu Sans Mono](https://dejavu-fonts.github.io) as the code font in PDFs
+- A small [Vercel Function](https://vercel.com/docs/functions) (`api/feedback.js`) that forwards feedback to Telegram
 
 ## Repository contents
 
 | File | Purpose |
 |---|---|
 | `index.html` | The whole app |
+| `api/feedback.js` | Sends feedback to the owner's Telegram |
 | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | Site icons |
 | `og-image.png` | Preview image shown when the link is shared |
 | `screenshot.png` | Screenshot used in this README |
@@ -96,6 +99,18 @@ Open `index.html` in any modern browser. An internet connection is needed the fi
 The site is static, with no build step. To host your own copy on Vercel, import this repository, set **Framework Preset** to **Other**, and deploy. Every push to the main branch updates the site.
 
 Visitor counts use [Vercel Web Analytics](https://vercel.com/docs/analytics). To see them, open the project in Vercel, go to **Analytics**, and click **Enable**.
+
+## Feedback setup
+
+Feedback is delivered by a Telegram bot. To receive it on your own copy:
+
+1. In Telegram, message [@BotFather](https://t.me/BotFather), send `/newbot`, and copy the token it gives you.
+2. Open your new bot and send it any message.
+3. Open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser and copy the number after `"chat":{"id":`.
+4. In Vercel, open **Settings → Environment Variables** and add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`.
+5. Redeploy.
+
+Each report arrives as a message with the device and settings. Attached programs arrive as a `programs.txt` file. The function accepts requests only from the site itself and limits each visitor to 5 messages every 10 minutes.
 
 ## Author
 

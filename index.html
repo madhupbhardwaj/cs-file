@@ -24,6 +24,7 @@
 <meta name="twitter:title" content="Python Practical File Maker">
 <meta name="twitter:description" content="Turn your Python programs into a Word or PDF practical file, styled like Python IDLE. Runs in your browser.">
 <meta name="twitter:image" content="https://cs-file.vercel.app/og-image.png">
+<script>window.FEEDBACK_ENDPOINT = "/api/feedback";</script>
 <!-- Vercel Web Analytics (enable it in the Vercel dashboard: Analytics > Enable) -->
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
 <script defer src="/_vercel/insights/script.js"></script>
@@ -72,12 +73,17 @@ header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: 
 header.top h1 { font-size: clamp(1.7rem, 3.4vw, 2.3rem); font-weight: 700; line-height: 1.1; }
 header.top h1 span { color: var(--accent); }
 header.top p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
-header.top > div:not(.credit) { min-width: 0; flex: 1 1 420px; }
+header.top > div:first-child { min-width: 0; flex: 1 1 420px; }
+.top-right { flex: none; align-self: flex-start; margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.top-right .credit { margin: 0; align-self: auto; }
+.fb-btn { font: 500 .8rem/1 var(--f-body); padding: 7px 10px; gap: 6px; background: transparent; color: var(--muted); border-color: var(--line); }
+.fb-btn:hover { color: var(--ink); }
+.fb-btn svg.i { width: 14px; height: 14px; }
 .credit { flex: none; align-self: flex-start; margin-left: auto; margin-top: 6px; display: inline-flex; align-items: center; gap: 9px; font: 500 .74rem/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); opacity: .55; white-space: nowrap; transition: opacity .25s ease; user-select: none; }
 .credit::before { content: ""; width: 22px; height: 1px; background: currentColor; opacity: .7; }
 .credit b { font-weight: 600; color: var(--ink); letter-spacing: .14em; }
 .credit:hover { opacity: .9; }
-@media (max-width: 640px) { .credit { order: -1; margin-top: 0; font-size: .68rem; } }
+@media (max-width: 640px) { .top-right { order: -1; width: 100%; justify-content: space-between; } .credit { font-size: .68rem; } }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } aside.panel { position: static !important; order: -1; } }
 
@@ -125,7 +131,7 @@ label.f > span em { font-style: normal; text-transform: none; letter-spacing: 0;
 .pair { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 10px; }
 select { width: 100%; font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 8px; }
 select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-textarea, input[type=text] { width: 100%; font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 11px; resize: vertical; }
+textarea, input[type=text], input[type=email] { width: 100%; font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 11px; resize: vertical; }
 textarea.q { min-height: 52px; }
 textarea.mono { font-family: var(--f-mono); font-size: .86rem; line-height: 1.55; background: var(--code-bg); tab-size: 4; white-space: pre; overflow-x: auto; overflow-wrap: normal; }
 textarea.code { min-height: 140px; }
@@ -206,6 +212,30 @@ aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--r); display: flex; gap: 12px; align-items: center; font-size: .93rem; z-index: 20; max-width: calc(100% - 32px); }
 .toast button { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 40%, transparent); padding: 6px 10px; }
 @media (prefers-reduced-motion: reduce) { .sheet.flash { animation: none; } }
+/* ---------- Feedback ---------- */
+html.modal-on, html.modal-on body { overflow: hidden; }
+.fb-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60; display: grid; place-items: center; background: rgb(8 14 22 / .55);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.fb-card { width: 100%; max-width: 500px; max-height: 100%; overflow-y: auto; background: var(--sheet); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: 0 24px 60px -20px rgb(0 0 0 / .45); }
+.fb-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.fb-head h2 { font-size: 1.2rem; font-weight: 700; }
+#fb-form { display: grid; gap: 14px; }
+.seg3 { grid-template-columns: repeat(3, 1fr); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.fb-details summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+.fb-details summary:hover { color: var(--ink); }
+.fb-details p { margin: 6px 0 0; font-size: .85rem; line-height: 1.5; color: var(--muted); }
+.fb-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.fb-status { flex: 1 1 100%; order: -1; font-size: .86rem; color: var(--muted); min-width: 0; }
+.fb-status:empty { display: none; }
+.fb-status.bad { color: var(--bad); }
+.fb-done { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 18px 4px 6px; }
+.fb-done svg { width: 44px; height: 44px; color: var(--ok); }
+.fb-done h3 { font-size: 1.15rem; }
+.fb-done p { margin: 0 0 8px; color: var(--muted); }
+.fb-link { color: var(--muted); font-size: .8rem; justify-self: start; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.status .linkish { margin-left: 4px; }
 /* ---------- In-app IDLE windows: drawn as paper in both site themes, so they match the exported file ---------- */
 .win { --w-bg: #FFFFFF; --w-ink: #000000; --tk-kw: #FF7700; --tk-bi: #900090; --tk-str: #00AA00; --tk-com: #DD0000; --tk-fn: #0000FF; --tk-num: #000000; --tk-out: #0000FF; --tk-in: #000000; --tk-err: #FF0000;
   --f-idle: Menlo, Consolas, "DejaVu Sans Mono", "IBM Plex Mono", ui-monospace, monospace;
@@ -356,7 +386,10 @@ html.intro-on, html.intro-on body { overflow: hidden; }
       <h1>Python <span>Practical File</span> Maker</h1>
       <p>Add your Python programs, run them here to fill in the output, and download a Word or PDF file with each program on its own page: question, code, sample input and sample output.</p>
     </div>
-    <div class="credit">Built by <b>Madhup</b></div>
+    <div class="top-right">
+      <div class="credit">Built by <b>Madhup</b></div>
+      <button type="button" class="fb-btn" id="fb-open" hidden><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/></svg>Feedback</button>
+    </div>
   </header>
 
   <div class="grid">
@@ -429,8 +462,40 @@ html.intro-on, html.intro-on body { overflow: hidden; }
         <button id="export-pdf" type="button" style="justify-content:center;padding:11px"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1.5h5.5L13 5v9.5H4z M9.5 1.5V5H13"/></svg>Download PDF</button>
         <div class="status" id="status" role="status"></div>
         <div class="lib" id="lib-state">Loading the Python runner…</div>
+        <button type="button" class="linkish fb-link" id="fb-open-2" hidden>Something not working? Send feedback</button>
       </div>
     </aside>
+  </div>
+</div>
+<div class="fb-overlay" id="fb" hidden>
+  <div class="fb-card" role="dialog" aria-modal="true" aria-labelledby="fb-title">
+    <div class="fb-head">
+      <h2 id="fb-title">Send feedback</h2>
+      <button type="button" class="ghost" id="fb-close" aria-label="Close"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+    <form id="fb-form" novalidate>
+      <div class="seg seg3" role="radiogroup" aria-label="Type of feedback">
+        <label for="fb-t1"><input type="radio" name="fbtype" id="fb-t1" value="problem" checked><span>Problem</span></label>
+        <label for="fb-t2"><input type="radio" name="fbtype" id="fb-t2" value="idea"><span>Idea</span></label>
+        <label for="fb-t3"><input type="radio" name="fbtype" id="fb-t3" value="other"><span>Other</span></label>
+      </div>
+      <label class="f" for="fb-msg"><span id="fb-msg-label">What went wrong?</span><textarea id="fb-msg" rows="5" maxlength="3000"></textarea></label>
+      <label class="f" for="fb-email"><span>Your email <em>optional, only if you want a reply</em></span><input type="email" id="fb-email" autocomplete="email" maxlength="200" placeholder="you@example.com"></label>
+      <label class="f" for="fb-prog"><span>Attach programs <em>helps me reproduce a problem</em></span><select id="fb-prog"></select></label>
+      <input type="text" id="fb-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp">
+      <details class="fb-details"><summary>What gets sent</summary><p>Your message, your email if you add one, your browser, device and screen size, the file settings, the number of programs, and the last error the site ran into. Your programs are sent only if you choose to attach them.</p></details>
+      <div class="fb-actions">
+        <span class="fb-status" id="fb-status" role="status"></span>
+        <button type="button" class="ghost" id="fb-cancel">Cancel</button>
+        <button type="submit" class="primary" id="fb-send">Send feedback</button>
+      </div>
+    </form>
+    <div class="fb-done" id="fb-done" hidden>
+      <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12.5 20.5l5 5 10-11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3>Thanks, it’s on its way</h3>
+      <p id="fb-done-note">Madhup will see it shortly.</p>
+      <button type="button" class="primary" id="fb-done-close">Close</button>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" hidden><span id="toast-msg"></span><button id="toast-undo" type="button">Undo</button></div>
@@ -1177,7 +1242,7 @@ function runProgram(p) {
 }
 async function doRun(p) {
   p.running = true; refreshCard(p);
-  try { await ensureSkulpt(); } catch (e) { p.running = false; refreshCard(p); setStatus("The Python runner couldn't load, so programs can't run here. Type the Sample output by hand instead.", "bad"); return false; }
+  try { await ensureSkulpt(); } catch (e) { p.running = false; refreshCard(p); noteError("runner", "Skulpt failed to load"); setStatus("The Python runner couldn't load, so programs can't run here. Type the Sample output by hand instead.", "bad", true); return false; }
   const Sk = window.Sk;
   const code = p.code, input = p.input;
   const lines = input.replace(/\r\n?/g, "\n").split("\n");
@@ -1616,7 +1681,15 @@ function refreshPanel() {
 
 /* ---------- Export ---------- */
 let exporting = false;
-function setStatus(msg, cls) { $("status").textContent = msg; $("status").className = "status" + (cls ? " " + cls : ""); }
+function setStatus(msg, cls, report) {
+  const st = $("status");
+  st.textContent = msg; st.className = "status" + (cls ? " " + cls : "");
+  if (report && FEEDBACK) {
+    const b = el("button", { type: "button", class: "linkish", text: "Report this problem" });
+    b.addEventListener("click", () => openFeedback(b));
+    st.append(" ", b);
+  }
+}
 function slug(s) { return (s || "Python Practical File").replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, " ").trim().slice(0, 80) || "Python Practical File"; }
 function fileNameOf(p, i) {
   const m = (p.source || "").match(/([^\\/]+?\.pyw?)(?:\s*\(\d+\))?$/i);
@@ -1648,7 +1721,7 @@ async function exportAs(kind) {
     let blob;
     if (kind === "pdf") {
       setStatus("Building the PDF…");
-      try { await ensurePdfLib(); } catch (e) { setStatus("The PDF maker couldn't load. Check your internet connection and try again.", "bad"); return; }
+      try { await ensurePdfLib(); } catch (e) { noteError("pdf library", "jsPDF failed to load"); setStatus("The PDF maker couldn't load. Check your internet connection and try again.", "bad", true); return; }
       blob = new Blob([buildPdf(window.jspdf.jsPDF, state.settings, progs, typeof IDLE_FONT_B64 === "string" ? IDLE_FONT_B64 : null)], { type: "application/pdf" });
     } else {
       setStatus("Building the Word file…");
@@ -1662,12 +1735,134 @@ async function exportAs(kind) {
     const code = e && e.code;
     if (code === "declined") setStatus("Download cancelled.");
     else if (code === "rate_limited") setStatus("A save prompt is already open. Finish that one first.", "bad");
-    else if (code) setStatus("The file couldn't be saved here (" + code + ").", "bad");
-    else setStatus("Something went wrong while building the file: " + (e?.message || e), "bad");
+    else if (code) { noteError("save " + kind, code); setStatus("The file couldn't be saved here (" + code + ").", "bad", true); }
+    else { noteError("export " + kind, e); setStatus("Something went wrong while building the file: " + (e?.message || e), "bad", true); }
   } finally { exporting = false; refreshPanel(); }
 }
 $("export-btn").addEventListener("click", () => exportAs("docx"));
 $("export-pdf").addEventListener("click", () => exportAs("pdf"));
+
+/* ---------- Feedback (sent to the site owner's Telegram by /api/feedback) ---------- */
+const APP_VERSION = "2026.10.23";
+const FEEDBACK = typeof window.FEEDBACK_ENDPOINT === "string" ? window.FEEDBACK_ENDPOINT : null; // only the Vercel site has the server part
+let lastError = null, fbOpener = null;
+function noteError(where, e) {
+  const msg = (e && (e.message || e.reason?.message)) || String(e || "unknown");
+  const at = e && e.stack ? " @ " + String(e.stack).split("\n").slice(1, 2).join("").trim() : "";
+  lastError = `${where}: ${msg}${at}`.slice(0, 500);
+}
+window.addEventListener("error", (e) => { if (e.error || e.message) noteError("page", e.error || e.message); });
+window.addEventListener("unhandledrejection", (e) => noteError("promise", e.reason));
+function deviceInfo() {
+  const ua = navigator.userAgent;
+  const m = (re) => (ua.match(re) || [])[1];
+  const browser = /Edg\//.test(ua) ? "Edge " + m(/Edg\/(\d+)/) : /OPR\//.test(ua) ? "Opera " + m(/OPR\/(\d+)/)
+    : /Firefox\//.test(ua) ? "Firefox " + m(/Firefox\/(\d+)/) : /CriOS\//.test(ua) ? "Chrome iOS " + m(/CriOS\/(\d+)/)
+    : /Chrome\//.test(ua) ? "Chrome " + m(/Chrome\/(\d+)/) : /Safari\//.test(ua) ? "Safari " + (m(/Version\/([\d.]+)/) || "") : "Other browser";
+  const os = /iPhone/.test(ua) ? "iPhone iOS " + (m(/OS (\d+[_\d]*)/) || "").replace(/_/g, ".") : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android " + (m(/Android ([\d.]+)/) || "")
+    : /Mac OS X/.test(ua) ? (navigator.maxTouchPoints > 1 ? "iPad" : "macOS") : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "Other OS";
+  return { browser, os, screen: `${window.innerWidth}×${window.innerHeight}` };
+}
+function feedbackContext() {
+  const st = state.settings;
+  return {
+    ...deviceInfo(), version: APP_VERSION, page: location.host + location.pathname, programCount: state.programs.length, lastError,
+    settings: { look: st.look === "simple" ? "Simple boxes" : "IDLE windows", perPage: st.perPage === 2 ? "2 per page" : "1 per page",
+      cover: st.cover ? "cover on" : "cover off", colour: st.colour ? "colour on" : "colour off", pyver: "Python " + pyVersion(st) },
+  };
+}
+function programsAsText(list) {
+  return list.map(({ p, n }) => [
+    `==================== Program ${n} ====================`,
+    `File: ${fileNameOf(p, n - 1)}    Status: ${statusOf(p).text}`,
+    `Question:\n${tidyQuestion(p.question || "") || "(none)"}`,
+    `--- Code ---\n${p.code}`,
+    `--- Sample input ---\n${p.input}`,
+    `--- Sample output ---\n${p.output}`,
+  ].join("\n\n")).join("\n\n\n");
+}
+const FB_LABELS = {
+  problem: ["What went wrong?", "For example: the PDF download does nothing on my iPhone, or program 3’s output is cut off."],
+  idea: ["What’s your idea?", "What would make the site more useful for you?"],
+  other: ["Your message", ""],
+};
+function fbType() { return (document.querySelector('input[name=fbtype]:checked') || {}).value || "problem"; }
+function fbSetType(t) {
+  const r = document.querySelector(`input[name=fbtype][value="${t}"]`); if (r) r.checked = true;
+  $("fb-msg-label").textContent = FB_LABELS[t][0]; $("fb-msg").placeholder = FB_LABELS[t][1];
+}
+function openFeedback(opener, type = "problem") {
+  if (!FEEDBACK) return;
+  fbOpener = opener || document.activeElement;
+  fbSetType(type);
+  // Attach options: none, the program in view, or all of them
+  const sel = $("fb-prog"); const cur = state.programs.find(p => p.id === activeId) || state.programs[0];
+  const opts = [el("option", { value: "none", text: "Don’t attach" })];
+  if (cur) { const n = state.programs.indexOf(cur) + 1; opts.push(el("option", { value: "current", text: `Program ${n}: ${firstLine(tidyQuestion(cur.question || ""), 40) || "no question"}` })); }
+  if (state.programs.length > 1) opts.push(el("option", { value: "all", text: `All ${state.programs.length} programs` }));
+  sel.replaceChildren(...opts); sel.value = "none"; sel.disabled = !cur;
+  $("fb-status").textContent = ""; $("fb-status").className = "fb-status";
+  $("fb-form").hidden = false; $("fb-done").hidden = true; $("fb-send").disabled = false;
+  $("fb").hidden = false; document.documentElement.classList.add("modal-on");
+  setTimeout(() => { if (!$("fb").contains(document.activeElement)) $("fb-msg").focus(); }, 30);
+}
+function closeFeedback() {
+  $("fb").hidden = true; document.documentElement.classList.remove("modal-on");
+  if (fbOpener && fbOpener.isConnected) fbOpener.focus();
+}
+async function sendFeedback(e) {
+  e.preventDefault();
+  const status = $("fb-status");
+  const say = (t, bad) => { status.textContent = t; status.className = "fb-status" + (bad ? " bad" : ""); };
+  const message = $("fb-msg").value.trim(), email = $("fb-email").value.trim();
+  if (!message) { say("Write a short message first.", true); $("fb-msg").focus(); return; }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say("That email doesn’t look right. Fix it or leave it empty.", true); $("fb-email").focus(); return; }
+  const which = $("fb-prog").value;
+  let list = [];
+  if (which === "all") list = state.programs.map((p, i) => ({ p, n: i + 1 }));
+  else if (which === "current") { const cur = state.programs.find(p => p.id === activeId) || state.programs[0]; if (cur) list = [{ p: cur, n: state.programs.indexOf(cur) + 1 }]; }
+  const body = { type: fbType(), message, email, website: $("fb-hp").value, context: feedbackContext(), programsText: list.length ? programsAsText(list) : "" };
+  $("fb-send").disabled = true; say("Sending…");
+  try {
+    const r = await fetch(FEEDBACK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.ok) {
+      $("fb-form").hidden = true; $("fb-done").hidden = false;
+      $("fb-done-note").textContent = email ? "Madhup will see it shortly and may reply by email." : "Madhup will see it shortly.";
+      $("fb-msg").value = ""; $("fb-done-close").focus();
+      return;
+    }
+    say(data.error === "rate_limited" ? "You’ve sent a few messages already. Please try again in a few minutes."
+      : data.error === "not_configured" ? "Feedback isn’t switched on for this site yet."
+      : data.error === "too_long" ? "That message is too long. Please shorten it."
+      : "Couldn’t send it. Please try again in a moment.", true);
+  } catch (err) {
+    say("Couldn’t send it. Check your internet connection and try again.", true);
+  }
+  $("fb-send").disabled = false;
+}
+if (FEEDBACK) {
+  $("fb-open").hidden = false; $("fb-open-2").hidden = false;
+  $("fb-open").addEventListener("click", (e) => openFeedback(e.currentTarget, "problem"));
+  $("fb-open-2").addEventListener("click", (e) => openFeedback(e.currentTarget, "problem"));
+  document.querySelectorAll("input[name=fbtype]").forEach(r => r.addEventListener("change", () => fbSetType(r.value)));
+  $("fb-form").addEventListener("submit", sendFeedback);
+  $("fb-close").addEventListener("click", closeFeedback);
+  $("fb-cancel").addEventListener("click", closeFeedback);
+  $("fb-done-close").addEventListener("click", closeFeedback);
+  $("fb").addEventListener("mousedown", (e) => { if (e.target === $("fb")) closeFeedback(); });
+  document.addEventListener("keydown", (e) => {
+    if ($("fb").hidden) return;
+    if (e.key === "Escape") { e.preventDefault(); closeFeedback(); return; }
+    if (e.key === "Tab") { // keep keyboard focus inside the dialog
+      const f = [...$("fb").querySelectorAll("button, input:not(.hp), textarea, select, summary")].filter(n => !n.disabled && n.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+}
 
 /* ---------- Boot ---------- */
 load();
