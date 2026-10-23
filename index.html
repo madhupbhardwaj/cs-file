@@ -95,6 +95,10 @@ button.primary:hover { filter: brightness(1.08); }
 button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 7px 8px; }
 button.ghost:hover { color: var(--ink); border-color: var(--line); }
 button:disabled { opacity: .55; cursor: default; }
+button .i-stop { display: none; }
+button.stop .i-run { display: none; }
+button.stop .i-stop { display: inline-block; }
+button.stop { color: var(--bad); border-color: var(--bad); }
 .btn input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .btn { position: relative; }
 svg.i { width: 16px; height: 16px; flex: none; }
@@ -1209,7 +1213,7 @@ let saveTimer;
 function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORE, JSON.stringify({ settings: state.settings, programs: state.programs.map(({ running, ...p }) => p) })); } catch (e) {}
+    try { localStorage.setItem(STORE, JSON.stringify({ settings: state.settings, programs: state.programs.map(({ running, stopReq, ...p }) => p) })); } catch (e) {}
   }, 400);
 }
 
@@ -1229,10 +1233,104 @@ function ensureSkulpt() {
 }
 function friendlyError(e) {
   let msg = e && e.toString ? e.toString() : String(e);
+  if (/^__STOP__/.test(msg)) return "Stopped: you pressed Stop before the program finished.";
+  if (/^__HARD__/.test(msg)) return "Stopped: the program took too long to finish. Check for an endless loop, or that every input() has a line in Sample input.";
   if (/TimeLimitError/.test(msg)) return "Stopped: the program ran for more than 8 seconds. Check for an endless loop, or that every input() has a line in Sample input.";
   const m = msg.match(/^(\w+(?:Error|Exception)?): ([\s\S]*?) on line (\d+)$/);
   if (m) return `Traceback (most recent call last):\n  File "<program>", line ${m[3]}\n${m[1]}: ${m[2]}`;
   return msg;
+}
+
+/* The Python runs in a Web Worker, a background thread. Stop simply shuts that thread down, so even
+   a program stuck in a long calculation can never freeze the page. If a worker can't be used
+   (older browser, blocked by the host page), runs fall back to the in-page runner above. */
+function pyWorkerMain() { // this function's source is what the worker runs; it can't use anything outside itself
+  let buf = [], last = Date.now(), timer = 0;
+  function flush() { clearTimeout(timer); timer = 0; if (buf.length) { postMessage({ type: "seg", segs: buf }); buf = []; } last = Date.now(); }
+  // send output as soon as it is printed (so Stop keeps what was already printed); only very fast bursts are batched
+  function rec(t, k) { if (!t) return; buf.push([t, k]); if (buf.length >= 100 || Date.now() - last >= 4) flush(); else if (!timer) timer = setTimeout(flush, 25); }
+  self.onmessage = (ev) => {
+    const m = ev.data;
+    if (m.type === "init") {
+      try { importScripts(m.sk, m.std); postMessage({ type: "ready" }); }
+      catch (e) { postMessage({ type: "fail", msg: String(e) }); }
+      return;
+    }
+    if (m.type !== "run") return;
+    const Sk = self.Sk;
+    const lines = m.lines;
+    let idx = 0, starved = false;
+    buf = []; last = Date.now();
+    Sk.configure({
+      output: (t) => rec(t, "out"),
+      read: (f) => { if (!Sk.builtinFiles || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+      inputfun: (prompt) => { let v = ""; if (idx < lines.length) v = lines[idx++]; else starved = true; rec(prompt || "", "out"); rec(v + "\n", "in"); return v; },
+      inputfunTakesPrompt: true,
+      __future__: Sk.python3,
+      execLimit: 8000,
+      yieldLimit: 200,
+      killableWhile: true, killableFor: true,
+    });
+    const fin = (err) => { flush(); postMessage({ type: "done", starved, err }); };
+    Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, m.code, true))
+      .then(() => fin(null), (e) => fin(e && e.toString ? e.toString() : String(e)));
+  };
+}
+const SK_URL = "https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js";
+const SK_STD_URL = "https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js";
+const HARD_MS = 15000;      // the worker is shut down if a run lasts this long, whatever it is doing
+let pyWorker = null, workerP = null, workerBroken = false, curRun = null, inlineRun = null;
+function dropWorker() { if (pyWorker) { try { pyWorker.terminate(); } catch (e) {} } pyWorker = null; workerP = null; }
+function startWorker() {
+  if (workerBroken) return Promise.reject(new Error("no worker"));
+  if (workerP) return workerP;
+  workerP = new Promise((resolve, reject) => {
+    let w, url;
+    try {
+      url = URL.createObjectURL(new Blob(["(" + pyWorkerMain.toString() + ")()"], { type: "text/javascript" }));
+      w = new Worker(url);
+    } catch (e) { reject(e); return; }
+    pyWorker = w;
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 60000);
+    const timer = setTimeout(() => reject(new Error("worker load timeout")), 30000);
+    w.onmessage = (ev) => {
+      const m = ev.data;
+      if (m.type === "ready") { clearTimeout(timer); resolve(w); }
+      else if (m.type === "fail") { clearTimeout(timer); reject(new Error(m.msg)); }
+      else if (curRun && curRun.w === w) curRun.onmsg(m);
+    };
+    w.onerror = () => { clearTimeout(timer); reject(new Error("worker error")); if (curRun && curRun.w === w) curRun.crash(); };
+    w.postMessage({ type: "init", sk: SK_URL, std: SK_STD_URL });
+  }).then((w) => { $("lib-state").textContent = "Programs run in your browser with a built-in Python 3 interpreter."; return w; })
+    .catch((e) => { dropWorker(); workerBroken = true; throw e; });
+  return workerP;
+}
+function runInWorker(w, p, code, lines, rec) {
+  return new Promise((resolve) => {
+    let done = false, hard;
+    const finish = (r, kill) => {
+      if (done) return;
+      done = true; clearTimeout(hard); curRun = null;
+      if (kill) { dropWorker(); startWorker().catch(() => {}); } // a fresh worker warms up for the next run
+      resolve(r);
+    };
+    curRun = {
+      w, p,
+      onmsg: (m) => {
+        if (m.type === "seg") { for (const [t, k] of m.segs) rec(t, k); }
+        else if (m.type === "done") finish({ starved: m.starved, err: m.err });
+      },
+      crash: () => finish({ starved: false, err: "The Python runner stopped unexpectedly. Try running the program again." }, true),
+      stop: (why) => finish({ starved: false, err: why }, true),
+    };
+    hard = setTimeout(() => { if (curRun && curRun.w === w) curRun.stop("__HARD__"); }, HARD_MS);
+    w.postMessage({ type: "run", code, lines });
+  });
+}
+function stopRun(p) {
+  p.stopReq = true;
+  if (curRun && curRun.p === p) curRun.stop("__STOP__");
+  else if (inlineRun && inlineRun.p === p && window.Sk) window.Sk.execLimit = 1; // in-page fallback: make Skulpt's own time limit fire now
 }
 let runChain = Promise.resolve();
 function runProgram(p) {
@@ -1241,31 +1339,49 @@ function runProgram(p) {
   return job;
 }
 async function doRun(p) {
-  p.running = true; refreshCard(p);
-  try { await ensureSkulpt(); } catch (e) { p.running = false; refreshCard(p); noteError("runner", "Skulpt failed to load"); setStatus("The Python runner couldn't load, so programs can't run here. Type the Sample output by hand instead.", "bad", true); return false; }
-  const Sk = window.Sk;
+  p.running = true; p.stopReq = false; refreshCard(p);
   const code = p.code, input = p.input;
   const lines = input.replace(/\r\n?/g, "\n").split("\n");
   if (lines.length && lines[lines.length - 1] === "" && input.endsWith("\n")) lines.pop();
-  let idx = 0, out = "", starved = false, error = false;
+  let out = "", starved = false, error = false, errText = null;
   const segs = [];
   const rec = (t, k) => { if (!t) return; out += t; const l = segs[segs.length - 1]; if (l && l.k === k) l.t += t; else segs.push({ t, k }); };
-  Sk.configure({
-    output: (t) => rec(t, "out"),
-    read: (f) => { if (!Sk.builtinFiles || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
-    inputfun: (prompt) => { let v = ""; if (idx < lines.length) v = lines[idx++]; else starved = true; rec(prompt || "", "out"); rec(v + "\n", "in"); return v; },
-    inputfunTakesPrompt: true,
-    __future__: Sk.python3,
-    execLimit: 8000,
-    yieldLimit: 200,
-    killableWhile: true, killableFor: true,
-  });
-  try {
-    await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, normalizeSrc(code), true));
-  } catch (e) {
+  let w = null;
+  try { w = await startWorker(); } catch (e) { w = null; }
+  if (p.stopReq) {
+    errText = "__STOP__";
+  } else if (w) {
+    const r = await runInWorker(w, p, normalizeSrc(code), lines, rec);
+    starved = r.starved; errText = r.err;
+  } else {
+    try { await ensureSkulpt(); } catch (e) { p.running = false; refreshCard(p); noteError("runner", "Skulpt failed to load"); setStatus("The Python runner couldn't load, so programs can't run here. Type the Sample output by hand instead.", "bad", true); return false; }
+    if (p.stopReq) errText = "__STOP__";
+  }
+  if (!w && !p.stopReq && errText === null) {
+    const Sk = window.Sk;
+    let idx = 0;
+    Sk.configure({
+      output: (t) => rec(t, "out"),
+      read: (f) => { if (!Sk.builtinFiles || Sk.builtinFiles.files[f] === undefined) throw "File not found: '" + f + "'"; return Sk.builtinFiles.files[f]; },
+      inputfun: (prompt) => { let v = ""; if (idx < lines.length) v = lines[idx++]; else starved = true; rec(prompt || "", "out"); rec(v + "\n", "in"); return v; },
+      inputfunTakesPrompt: true,
+      __future__: Sk.python3,
+      execLimit: 8000,
+      yieldLimit: 200,
+      killableWhile: true, killableFor: true,
+    });
+    inlineRun = { p };
+    try {
+      await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody("<stdin>", false, normalizeSrc(code), true));
+    } catch (e) {
+      errText = (p.stopReq && /TimeLimitError/.test(String(e))) ? "__STOP__" : e;
+    }
+    inlineRun = null;
+  }
+  if (errText !== null && errText !== undefined) {
     error = true;
     if (out && !out.endsWith("\n")) rec("\n", "out");
-    rec(friendlyError(e) + "\n", "err");
+    rec(friendlyError(errText) + "\n", "err");
   }
   p.running = false;
   p.output = out; p.segs = segs; p.segsFor = out; p.error = error; p.starved = starved; p.ranKey = keyOf({ code, input });
@@ -1311,7 +1427,8 @@ const ICON = {
   up: '<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 13V3M4 7l4-4 4 4"/></svg>',
   down: '<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M4 9l4 4 4-4"/></svg>',
   del: '<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"/></svg>',
-  run: '<svg class="i" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.2v9.6L12.6 8z"/></svg>',
+  run: '<svg class="i i-run" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.2v9.6L12.6 8z"/></svg>',
+  stop: '<svg class="i i-stop" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1.2"/></svg>',
 };
 function iconBtn(svg, label, fn) { const b = el("button", { class: "ghost", type: "button", "aria-label": label, title: label, onclick: fn }); b.innerHTML = svg; return b; }
 
@@ -1346,8 +1463,8 @@ function buildCard(p) {
   const outWin = el("div", { class: "win shell" }, [winBar(shellTitle), el("div", { class: "shell-body" }, [side, outEd])]);
   syncScroll(code, codeHl); syncScroll(out, outHl, side);
   const inHint = el("em");
-  const runBtn = el("button", { type: "button", onclick: () => runProgram(p) });
-  runBtn.innerHTML = ICON.run + "<span>Run</span>";
+  const runBtn = el("button", { type: "button", onclick: () => (p.running ? stopRun(p) : runProgram(p)) });
+  runBtn.innerHTML = ICON.run + ICON.stop + "<span>Run</span>";
   const note = el("span", { class: "note" });
 
   q.value = p.question; code.value = p.code; inp.value = p.input; out.value = p.output;
@@ -1416,11 +1533,13 @@ function refreshCard(p) {
   c.src.textContent = p.source || ""; c.src.hidden = !p.source;
   const k = countInputs(p.code);
   c.inHint.textContent = k ? `${k} input() call${k > 1 ? "s" : ""}` : "no input() calls";
-  c.runBtn.disabled = p.running || !p.code.trim();
-  c.runBtn.querySelector("span").textContent = p.running ? "Running…" : "Run";
+  c.runBtn.disabled = !p.running && !p.code.trim();
+  c.runBtn.classList.toggle("stop", !!p.running);
+  c.runBtn.querySelector("span").textContent = p.running ? "Stop" : "Run";
   let note = "", cls = "note";
   const looksAssigned = /^\s*[A-Za-z_]\w*\s*=/m.test(p.input);
-  if (p.ranKey === keyOf(p) && p.error && looksAssigned && /ValueError/.test(p.output)) { note = "Sample input should hold only the values you\u2019d type, like 12, not a=12. Remove the \u201ca=\u201d parts and run again."; cls += " bad"; }
+  if (p.running) { note = "Running\u2026 press Stop to cancel."; }
+  else if (p.ranKey === keyOf(p) && p.error && looksAssigned && /ValueError/.test(p.output)) { note = "Sample input should hold only the values you\u2019d type, like 12, not a=12. Remove the \u201ca=\u201d parts and run again."; cls += " bad"; }
   else if (/^\s*#/.test(p.question)) { note = "The question still starts with #. Click in the Question box, then click outside it, and it will be cleaned up."; cls += " warn"; }
   else if (p.ranKey === keyOf(p) && p.starved) { note = "The program asked for more input than you gave. Add another line to Sample input and run again."; cls += " warn"; }
   else if (p.ranKey === keyOf(p) && p.error) { note = "The program stopped with an error. Fix the code, or keep the error if that's what you want to show."; cls += " bad"; }
@@ -1883,7 +2002,7 @@ updateActive();
 // remember whether File settings is open
 try { if (localStorage.getItem("pyfile.settingsOpen") === "0") $("settings").open = false; } catch (e) {}
 $("settings").addEventListener("toggle", () => { try { localStorage.setItem("pyfile.settingsOpen", $("settings").open ? "1" : "0"); } catch (e) {} });
-ensureSkulpt().catch(() => {});
+startWorker().catch(() => { ensureSkulpt().catch(() => {}); });
 </script>
 
 </body>
