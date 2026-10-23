@@ -165,6 +165,17 @@ details.settings[open] > summary::after { transform: rotate(45deg); }
 details.settings > summary:hover { color: var(--ink); }
 details.settings > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 .settings-body { display: grid; gap: 14px; margin-top: 12px; }
+div.f { display: grid; gap: 5px; min-width: 0; }
+.f-label { font: 600 .74rem/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 3px; border: 1px solid var(--line); border-radius: var(--r); background: var(--sheet-2); }
+.seg label { position: relative; display: block; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg span { display: block; text-align: center; padding: 8px 6px; border-radius: 4px; font: 500 .9rem/1.2 var(--f-body); color: var(--muted); border: 1px solid transparent; }
+.seg span b { font-family: var(--f-mono); font-weight: 600; }
+.seg label:hover span { color: var(--ink); }
+.seg input:checked + span { background: var(--sheet); color: var(--ink); border-color: var(--line); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg-note { margin: 2px 0 0; font-size: .82rem; line-height: 1.4; color: var(--muted); }
 .sheet { scroll-margin-top: 16px; }
 aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
 .tally { font: 500 .85rem var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -180,6 +191,7 @@ aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
 .pages.idle .page .box { background: #FFFFFF; border: 0.5px solid #9A9AA0; border-top: 3px solid #2D2D30; border-radius: 0; }
 .pages.idle .page i.k { background: #F5B27A; } .pages.idle .page i.c { background: #EE9A9A; } .pages.idle .page i.s { background: #8FD08F; }
 .pages.idle .page .box.out i { background: #8C9CF0; }
+.page .gap { display: block; height: 4px; flex: none; }
 .page .lbl { font: 600 4.5px/1 var(--f-body); color: #1E3A5F; text-transform: uppercase; margin-top: 2px; }
 .page.cover { justify-content: flex-start; align-items: center; text-align: center; }
 .page.cover b { font-size: 7.5px; margin-top: 10px; }
@@ -390,6 +402,14 @@ html.intro-on, html.intro-on body { overflow: hidden; }
           <div class="settings-body">
             <label class="f" for="doc-title"><span>File title</span><input type="text" id="doc-title" placeholder="Python Practical File"></label>
             <label class="f" for="doc-sub"><span>Name, class, roll no. <em>optional</em></span><textarea id="doc-sub" rows="2" placeholder="Your name · Class XII · Roll no. 14"></textarea></label>
+            <div class="f" role="radiogroup" aria-labelledby="pp-label">
+              <span id="pp-label" class="f-label">Programs per page</span>
+              <div class="seg">
+                <label for="pp-1"><input type="radio" name="perpage" id="pp-1" value="1"><span><b>1</b> per page</span></label>
+                <label for="pp-2"><input type="radio" name="perpage" id="pp-2" value="2"><span><b>2</b> per page</span></label>
+              </div>
+              <p class="seg-note" id="pp-note"></p>
+            </div>
             <div class="pair">
               <label class="f" for="opt-look"><span>Code style</span>
                 <select id="opt-look"><option value="idle">IDLE windows</option><option value="simple">Simple boxes</option></select></label>
@@ -516,10 +536,11 @@ function run(text, opts = {}) {
   if (opts.sz) rpr += `<w:sz w:val="${opts.sz}"/><w:szCs w:val="${opts.sz}"/>`;
   return `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ""}<w:t xml:space="preserve">${xesc(text)}</w:t></w:r>`;
 }
-function para(content, { style, jc, pageBreak, keepNext } = {}) {
+function para(content, { style, jc, pageBreak, keepNext, noKeep } = {}) {
   let ppr = "";
   if (style) ppr += `<w:pStyle w:val="${style}"/>`;
   if (keepNext) ppr += "<w:keepNext/>";
+  if (noKeep) ppr += '<w:keepNext w:val="0"/>';
   if (pageBreak) ppr += "<w:pageBreakBefore/>";
   if (jc) ppr += `<w:jc w:val="${jc}"/>`;
   return `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ""}${content}</w:p>`;
@@ -578,31 +599,37 @@ function idleTable(grid, rowsXml) {
     `<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="150" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="150" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr>` +
     `<w:tblGrid>${grid.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rowsXml}</w:tbl>`;
 }
-function idleTitleRow(title, span) {
+function idleTitleRow(title, span, keep = true) {
   const dots = IDLE_DOTS.map(c => run("●", { color: c, font: "Arial", sz: 30 })).join(run(" ", { font: "Arial", sz: 14 }));
-  return `<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ""}` +
+  return `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="440" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ""}` +
     `<w:shd w:val="clear" w:color="auto" w:fill="${IDLE.title}"/><w:tcMar><w:top w:w="40" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/></w:tcMar></w:tcPr>` +
-    para(dots + run("     " + title, { color: IDLE.titleText, font: "Arial", sz: 17, b: true }), { style: "IdleTitle", keepNext: true }) + `</w:tc></w:tr>`;
+    para(dots + run("     " + title, { color: IDLE.titleText, font: "Arial", sz: 17, b: true }), { style: "IdleTitle", keepNext: keep, noKeep: !keep }) + `</w:tc></w:tr>`;
 }
 const idleRunsXml = (runs, colour) => runs.map(tk => run(tk.t, { color: colour ? IDLE[tk.k] : undefined })).join("");
 /* IDLE editor window: dark title bar, white page, IDLE Classic syntax colours */
-function idleEditor(title, code, colour) {
-  const paras = codeTokens(code, true).map(line => para(idleRunsXml(line, colour), { style: "IdleCode" })).join("");
+function idleEditor(title, code, colour) { return idleEditorXml(title, codeTokens(code, true), colour, true); }
+function idleEditorXml(title, lines, colour, keep) {
+  const paras = lines.map(line => para(idleRunsXml(line, colour), { style: "IdleCode" })).join("");
   const mar = `<w:tcMar><w:top w:w="110" w:type="dxa"/><w:bottom w:w="150" w:type="dxa"/></w:tcMar>`;
-  return idleTable([CONTENT_W], idleTitleRow(title, 1) + `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`);
+  return idleTable([CONTENT_W], (title ? idleTitleRow(title, 1, keep) : "") + `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`);
 }
 /* Plain white IDLE-style box for the typed input */
-function idleInputBox(text) {
-  const paras = codeTokens(text, false).map(line => para(idleRunsXml(line.map(r => ({ t: r.t, k: "in" })), true), { style: "IdleCode" })).join("");
+function idleInputBox(text) { return idleInputXml(codeTokens(text, false).map(line => line.map(r => ({ t: r.t, k: "in" })))); }
+function idleInputXml(lines) {
+  const paras = lines.map(line => para(idleRunsXml(line, true), { style: "IdleCode" })).join("");
   const mar = `<w:tcMar><w:top w:w="100" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/></w:tcMar>`;
   return idleTable([CONTENT_W], `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`);
 }
 /* IDLE Shell window: prompt sidebar, blue output, black typed input, red errors */
 const IDLE_SIDE_W = 820;
-function idleShell(title, segs) {
+function shellRows(segs) {
   const rows = segLines(segs).filter((l, i, a) => !(a.length === 1 && !l.length)).map(l => ({ side: "", runs: l }));
   rows.push({ side: ">>>", runs: [] });
-  let xml = idleTitleRow(title, 2);
+  return rows;
+}
+function idleShell(title, segs) { return idleShellXml(title, shellRows(segs), true); }
+function idleShellXml(title, rows, keep) {
+  let xml = title ? idleTitleRow(title, 2, keep) : "";
   rows.forEach((r, i) => {
     const mar = `<w:tcMar><w:top w:w="${i === 0 ? 110 : 0}" w:type="dxa"/><w:bottom w:w="${i === rows.length - 1 ? 150 : 0}" w:type="dxa"/></w:tcMar>`;
     xml += `<w:tr><w:trPr><w:cantSplit/></w:trPr>` +
@@ -637,7 +664,8 @@ function buildDocumentXml(settings, programs) {
     });
     body += `<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_W}" w:type="dxa"/><w:tblBorders>${b("top")}${b("left")}${b("bottom")}${b("right")}${b("insideH")}${b("insideV")}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr><w:tblGrid><w:gridCol w:w="1100"/><w:gridCol w:w="${CONTENT_W - 1100}"/></w:tblGrid>${rows}</w:tbl>`;
   }
-  programs.forEach((p, idx) => {
+  if (settings.perPage === 2) body += flowBody(settings, programs);
+  else programs.forEach((p, idx) => {
     body += para(run(`Program ${idx + 1}`), { style: "Heading1", pageBreak: hasCover || idx > 0 });
     body += para(run("Question"), { style: "Label", keepNext: true });
     const qText = tidyQuestion(p.question || "");
@@ -654,21 +682,159 @@ function buildDocumentXml(settings, programs) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document ${W_NS}><w:body>${body}</w:body></w:document>`;
 }
 
+/* ---------- Two programs per page (.docx) ----------
+   Word decides page breaks on its own, so it could squeeze three short programs onto one page.
+   Here the pages are laid out ahead of time with fixed line heights and written with hard page breaks,
+   leaving spare room at the bottom of every page, so Word, Google Docs or Pages never move a program. */
+const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+/* Lines a paragraph needs, measured with Arial widths (wider than Calibri, so the estimate errs on the safe side) */
+function textLinesEstimate(text, widthPt, size) {
+  const cw = (ch) => { const c = ch.charCodeAt(0); return (c >= 32 && c <= 126 ? HELV[c - 32] : 1000) * size / 1000; };
+  const sp = cw(" ");
+  return normalizeSrc(text).replace(/\s+$/, "").split("\n").map(par => {
+    if (!par.trim()) return 1;
+    let lines = 1, x = 0;
+    for (const word of par.trim().split(/ +/)) {
+      let w = 0; for (const ch of word) w += cw(ch);
+      if (w > widthPt) { if (x > 0) lines++; lines += Math.floor(w / widthPt); x = w % widthPt; continue; }
+      if (x === 0) x = w; else if (x + sp + w <= widthPt) x += sp + w; else { lines++; x = w; }
+    }
+    return lines;
+  });
+}
+function wrapRunLines(lines, maxChars) {
+  const out = [];
+  lines.forEach(line => {
+    let cur = [], len = 0;
+    line.forEach(tok => {
+      let t = tok.t;
+      while (t.length) {
+        const room = maxChars - len;
+        if (room <= 0) { out.push(cur); cur = []; len = 0; continue; }
+        const piece = t.slice(0, room);
+        cur.push({ t: piece, k: tok.k }); len += piece.length; t = t.slice(room);
+      }
+    });
+    out.push(cur);
+  });
+  return out;
+}
+// Heights in points. The page body is A4 minus the margins; SLACK stays empty at the bottom of each page.
+const FLOW = { body: (16838 - 1300 - 1300) / 20, slack: 24, gap: 22, mark: 1, head: 38, label: 28, qline: 17, qafter: 2, title: 22, border: 2 };
+function flowData(p, settings) {
+  const idle = settings.look !== "simple";
+  const qText = tidyQuestion(p.question || "");
+  const qLines = qText ? textLinesEstimate(qText, (CONTENT_W / 20) * 0.96, 12) : [1];
+  // Lines are wrapped ahead of time at a width that fits even the widest common monospace fonts
+  const CH = idle ? 72 : 76, CH_OUT = idle ? 65 : 76;
+  const row = (runs) => ({ side: "", runs });
+  const code = wrapRunLines(codeTokens(p.code, true), CH).map(row);
+  const input = (p.input || "").trim() ? wrapRunLines(codeTokens(p.input, false).map(l => l.map(r => ({ t: r.t, k: idle ? "in" : "" }))), CH).map(row) : null;
+  let out;
+  if (idle) {
+    out = [];
+    shellRows(p.segs || segmentOutput(p.output, p.input)).forEach(r => wrapRunLines([r.runs], CH_OUT).forEach((runs, k) => out.push({ side: k === 0 ? r.side : "", runs })));
+  } else out = wrapRunLines(codeTokens(p.output || "", false), CH).map(row);
+  return { qText, qLines, code, input, out };
+}
+function flowLayout(settings, programs, data) {
+  const idle = settings.look !== "simple", perPage = settings.perPage === 2 ? 2 : 1;
+  const F = FLOW, LIMIT = F.body - F.slack, lh = idle ? 13.5 : 12.5;
+  const partH = {
+    code: (n, t) => idle ? (t ? F.title : 0) + 5.5 + n * lh + 7.5 + F.border : 5 + n * lh + 5 + F.border,
+    input: (n) => idle ? 5 + n * lh + 6 + F.border : 5 + n * lh + 5 + F.border,
+    out: (n, t) => idle ? (t ? F.title : 0) + 5.5 + n * lh + 7.5 + F.border : 5 + n * lh + 5 + F.border,
+  };
+  const pages = []; let page = null, used = 0, cur = -1;
+  const open = (marker) => { page = { marker, items: [], progs: new Set() }; pages.push(page); used = marker ? F.mark : 0; if (cur >= 0) page.progs.add(cur); };
+  const add = (it, h) => { page.items.push(it); used += h; };
+  // A labelled box (code, input or output) that may continue onto later pages; the label always stays with its first lines
+  const placeBox = (labelText, kind, rows, hasTitle) => {
+    const ph = partH[kind];
+    if (used + F.label + ph(Math.min(3, rows.length), hasTitle) > LIMIT) open(true);
+    add({ t: "label", text: labelText }, F.label);
+    let i = 0, first = true;
+    while (i < rows.length) {
+      const title = first && hasTitle;
+      let n = 0; while (i + n < rows.length && used + ph(n + 1, title) <= LIMIT) n++;
+      const left = rows.length - i;
+      if (!page.items.length && n < 1) n = 1;                 // never loop on an empty page
+      if (n < 1 || (n < 3 && left > n)) { open(true); continue; } // don't leave one or two stray lines at the bottom
+      add({ t: kind, idx: cur, from: i, to: i + n, title }, ph(n, title));
+      i += n; first = false;
+      if (i < rows.length) open(true);
+    }
+  };
+  programs.forEach((p, idx) => {
+    const d = data[idx];
+    const qH = d.qLines.reduce((sum, n) => sum + n * F.qline + F.qafter, 0);
+    const startNeed = F.head + F.label + qH + F.label + partH.code(Math.min(3, d.code.length), idle);
+    cur = -1;
+    if (!page) open(!!settings.cover);
+    else if (perPage === 1 || page.progs.size >= 2 || used + F.gap + startNeed > LIMIT) open(true);
+    else add({ t: "gap" }, F.gap);
+    cur = idx; page.progs.add(idx);
+    add({ t: "head", idx }, F.head);
+    add({ t: "label", text: "Question" }, F.label);
+    add({ t: "question", idx }, qH);
+    placeBox("Code", "code", d.code, idle);
+    if (d.input) placeBox("Sample Input", "input", d.input, false);
+    else {
+      if (used + F.label + F.qline + F.qafter > LIMIT) open(true);
+      add({ t: "label", text: "Sample Input" }, F.label); add({ t: "noinput" }, F.qline + F.qafter);
+    }
+    placeBox("Sample Output", "out", d.out, idle);
+  });
+  return pages;
+}
+function flowBody(settings, programs) {
+  const idle = settings.look !== "simple", ver = pyVersion(settings);
+  const data = programs.map(p => flowData(p, settings));
+  const pages = flowLayout(settings, programs, data);
+  const MARK = '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
+  const GAP = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="440" w:lineRule="exact"/></w:pPr></w:p>';
+  const simpleRows = (rows, colour) => rows.map(r => para(r.runs.map(tok => run(tok.t, { color: colour ? DOCX_COLOURS[tok.k] : undefined, i: colour && tok.k === "com" })).join(""), { style: "Code" })).join("");
+  let body = "";
+  pages.forEach(pg => {
+    if (pg.marker) body += MARK;
+    pg.items.forEach(it => {
+      const d = data[it.idx], p = programs[it.idx];
+      if (it.t === "gap") body += GAP;
+      else if (it.t === "head") body += para(run(`Program ${it.idx + 1}`), { style: "Heading1", noKeep: true });
+      else if (it.t === "label") body += para(run(it.text), { style: "Label", noKeep: true });
+      else if (it.t === "question") body += d.qText ? textParas(d.qText, "Question") : para(run("(No question written)", { i: true, color: "8A969E" }), { style: "Question" });
+      else if (it.t === "noinput") body += para(run("No input needed.", { i: true, color: "57666F" }), { style: "Question" });
+      else if (it.t === "code") {
+        const rows = d.code.slice(it.from, it.to);
+        body += idle ? idleEditorXml(it.title ? `${progFile(p, it.idx)} (${ver})` : null, rows.map(r => r.runs), settings.colour, false)
+                     : boxTable(simpleRows(rows, settings.colour), "F3F6F8");
+      } else if (it.t === "input") {
+        const rows = d.input.slice(it.from, it.to);
+        body += idle ? idleInputXml(rows.map(r => r.runs)) : boxTable(simpleRows(rows, false), "FFFFFF");
+      } else if (it.t === "out") {
+        const rows = d.out.slice(it.from, it.to);
+        body += idle ? idleShellXml(it.title ? `IDLE Shell ${ver}` : null, rows, false) : boxTable(simpleRows(rows, false), "FFFFFF");
+      }
+    });
+  });
+  return body;
+}
+
 function stylesXml() {
   const s = (id, name, ppr, rpr, extra = "") => `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/>${extra}<w:qFormat/><w:pPr>${ppr}</w:pPr><w:rPr>${rpr}</w:rPr></w:style>`;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="23"/><w:szCs w:val="23"/><w:lang w:val="en-IN"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="23"/><w:szCs w:val="23"/><w:lang w:val="en-IN"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:widowControl w:val="0"/><w:spacing w:after="80" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
 <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
 ${s("Title", "Title", '<w:spacing w:before="1200" w:after="200"/>', '<w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light"/><w:b/><w:color w:val="1E3A5F"/><w:sz w:val="56"/><w:szCs w:val="56"/>')}
 ${s("Subtitle", "Subtitle", '<w:spacing w:after="60"/>', '<w:color w:val="44525C"/><w:sz w:val="28"/><w:szCs w:val="28"/>')}
 ${s("IndexHead", "Index Heading", '<w:keepNext/><w:spacing w:before="900" w:after="160"/>', '<w:b/><w:color w:val="1E3A5F"/><w:sz w:val="30"/><w:szCs w:val="30"/>')}
-${s("Heading1", "heading 1", '<w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="1E4FA3"/></w:pBdr><w:spacing w:before="0" w:after="160"/><w:outlineLvl w:val="0"/>', '<w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light"/><w:b/><w:color w:val="1E3A5F"/><w:sz w:val="34"/><w:szCs w:val="34"/>')}
-${s("Label", "Section Label", '<w:keepNext/><w:spacing w:before="220" w:after="80"/>', '<w:b/><w:caps/><w:spacing w:val="10"/><w:color w:val="1E4FA3"/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
-${s("Question", "Question", '<w:spacing w:after="40" w:line="276" w:lineRule="auto"/>', '<w:sz w:val="24"/><w:szCs w:val="24"/>')}
-${s("Code", "Code", '<w:spacing w:before="0" w:after="0" w:line="259" w:lineRule="auto"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="19"/><w:szCs w:val="19"/>')}
-${s("IdleCode", "IDLE Code", '<w:spacing w:before="0" w:after="0" w:line="276" w:lineRule="auto"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
-${s("IdleTitle", "IDLE Title Bar", '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>', '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="17"/><w:szCs w:val="17"/>')}
+${s("Heading1", "heading 1", '<w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="1E4FA3"/></w:pBdr><w:spacing w:before="0" w:after="160" w:line="480" w:lineRule="exact"/><w:outlineLvl w:val="0"/>', '<w:rFonts w:ascii="Calibri Light" w:hAnsi="Calibri Light"/><w:b/><w:color w:val="1E3A5F"/><w:sz w:val="34"/><w:szCs w:val="34"/>')}
+${s("Label", "Section Label", '<w:keepNext/><w:spacing w:before="220" w:after="80" w:line="260" w:lineRule="exact"/>', '<w:b/><w:caps/><w:spacing w:val="10"/><w:color w:val="1E4FA3"/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
+${s("Question", "Question", '<w:spacing w:after="40" w:line="340" w:lineRule="exact"/>', '<w:sz w:val="24"/><w:szCs w:val="24"/>')}
+${s("Code", "Code", '<w:spacing w:before="0" w:after="0" w:line="250" w:lineRule="exact"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="19"/><w:szCs w:val="19"/>')}
+${s("IdleCode", "IDLE Code", '<w:spacing w:before="0" w:after="0" w:line="270" w:lineRule="exact"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
+${s("IdleTitle", "IDLE Title Bar", '<w:spacing w:before="0" w:after="0" w:line="360" w:lineRule="exact"/>', '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="17"/><w:szCs w:val="17"/>')}
 ${s("Cell", "Table Cell", '<w:spacing w:before="0" w:after="0"/>', '<w:sz w:val="21"/><w:szCs w:val="21"/>')}
 ${s("Footer", "footer", '<w:spacing w:after="0"/>', '<w:color w:val="7A8790"/><w:sz w:val="18"/><w:szCs w:val="18"/>')}
 </w:styles>`;
@@ -719,12 +885,14 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
   const MAX_CHARS = Math.floor((W - 2 * PAD_X) / CHAR_W);
   let y = TOP;
   const hasCover = !!settings.cover;
-  const newPage = () => { doc.addPage(); y = TOP; };
+  const perPage = settings.perPage === 2 ? 2 : 1, GAP = 26;
+  // pageProgs = how many programs appear on the current page (a program carried over from the previous page counts)
+  let pageProgs = 0, curProg = -1;
+  const newPage = () => { doc.addPage(); y = TOP; pageProgs = curProg >= 0 ? 1 : 0; };
   const ensure = (h) => { if (y + h > BOTTOM) newPage(); };
   const font = (fam, style, size, color) => { doc.setFont(fam, style); doc.setFontSize(size); doc.setTextColor(color); };
 
-  function heading(text, first) {
-    if (!first) newPage();
+  function heading(text) {
     font("helvetica", "bold", 17, COL.head);
     doc.text(pdfSafe(text), L, y + 15);
     doc.setDrawColor(COL.accent); doc.setLineWidth(1); doc.line(L, y + 22, R, y + 22);
@@ -891,10 +1059,26 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
     programs.forEach((p, idx) => drawRow(String(idx + 1), firstLine(tidyQuestion(p.question || ""), 110) || "Program " + (idx + 1), false));
   }
 
+  if (hasCover) { curProg = -1; newPage(); }
+  // Room a program needs before it may start on a page that already has content:
+  // heading, question and the start of the code window, so it never begins as a stranded heading.
+  function startNeed(p, qText) {
+    font("helvetica", "normal", 12, COL.ink);
+    const qH = normalizeSrc(qText || "x").replace(/\s+$/, "").split("\n").reduce((sum, par) => sum + (par.trim() ? doc.splitTextToSize(pdfSafe(par), W).length : 1) * 12 * 1.32 + 2, 0);
+    const codeN = Math.min(3, codeTokens(p.code, true).length);
+    const codeH = settings.look !== "simple" ? I_TITLE + 6 + codeN * I_LH + 7 : codeN * CODE_LH + 2 * PAD_Y;
+    return 34 + 23 + qH + 23 + codeH;
+  }
   programs.forEach((p, idx) => {
-    heading(`Program ${idx + 1}`, !hasCover && idx === 0);
-    label("Question");
     const qText = tidyQuestion(p.question || "");
+    if (y > TOP + 0.5) {
+      curProg = -1;
+      if (perPage === 1 || pageProgs >= 2 || y + GAP + startNeed(p, qText) > BOTTOM) newPage();
+      else y += GAP;
+    }
+    curProg = idx; pageProgs++;
+    heading(`Program ${idx + 1}`);
+    label("Question");
     if (qText) textBlock(qText); else textBlock("(No question written)", { italic: true, color: COL.grey });
     const idle = settings.look !== "simple";
     label("Code");
@@ -916,7 +1100,7 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
   }
   return doc.output("arraybuffer");
 }
-if (typeof module !== "undefined") module.exports = { splitHeader, splitMany, highlight, buildDocx, tidyQuestion, buildPdf, segmentOutput };
+if (typeof module !== "undefined") module.exports = { splitHeader, splitMany, highlight, buildDocx, tidyQuestion, buildPdf, segmentOutput, flowData, flowLayout };
 </script>
 
 <script>/* DejaVu Sans Mono subset (Bitstream Vera licence, free to embed): the monospace face Menlo is based on, used for IDLE windows in the PDF */
@@ -941,7 +1125,7 @@ const EXAMPLES = [
     input: "8", output: "How many terms? 8\n0, 1, 1, 2, 3, 5, 8, 13\n" },
 ];
 
-let state = { settings: { title: "Python Practical File", subtitle: "", cover: true, colour: true, look: "idle", pyver: "3.13" }, programs: [] };
+let state = { settings: { title: "Python Practical File", subtitle: "", cover: true, colour: true, look: "idle", pyver: "3.13", perPage: 1 }, programs: [] };
 function makeProgram(o = {}) {
   const p = { id: uid(), question: "", code: "", input: "", output: "", ranKey: null, error: false, starved: false, running: false, example: false, source: "", ...o };
   return p;
@@ -1331,39 +1515,76 @@ function updateActive() {
   if (best !== activeId) { activeId = best; markActive(); }
 }
 window.addEventListener("scroll", () => { if (!scrollRaf) scrollRaf = requestAnimationFrame(updateActive); }, { passive: true });
-function miniPage(p, n) {
-  const page = el("div", { class: "page", tabindex: "0", role: "button", "aria-label": `Go to Program ${n}` });
-  page.append(el("b", { text: `Program ${n}` }));
-  const q = (p.question || "").trim();
-  const qLines = Math.max(1, Math.min(3, Math.ceil(q.length / 55)));
-  for (let i = 0; i < qLines; i++) page.append(el("i", { style: `width:${i === qLines - 1 && qLines > 1 ? 55 : 92}%` }));
-  page.append(el("span", { class: "lbl", text: "Code" }));
+/* Rough page plan for the previews and the page count. The exports measure exactly; this only has to look right. */
+function estimatePages() {
+  const ps = state.programs, CAP = 54, two = state.settings.perPage === 2;
+  const units = (p) => {
+    const q = Math.max(1, Math.ceil(tidyQuestion(p.question || "").length / 80));
+    const lines = (t) => Math.max(1, normalizeSrc(t || "").replace(/\s+$/, "").split("\n").length);
+    return { start: 6 + q + Math.min(3, lines(p.code)) + 2, total: 9 + q + lines(p.code) + 2 + lines(p.input) + 1 + lines(p.output) + 3 };
+  };
+  const pages = []; let page = null, used = 0;
+  ps.forEach((p, i) => {
+    const u = units(p);
+    if (!page || !two || page.length >= 2 || used + 2 + u.start > CAP) { page = []; pages.push(page); used = 0; } else used += 2;
+    let left = u.total, first = true;
+    while (left > 0) {
+      const take = Math.min(left, CAP - used);
+      page.push({ p, n: i + 1, start: first, end: take === left, units: take });
+      used += take; left -= take; first = false;
+      if (left > 0) { page = []; pages.push(page); used = 0; }
+    }
+  });
+  return pages;
+}
+function miniPage(segs, pageNo) {
+  const page = el("div", { class: "page", tabindex: "0", role: "button", "aria-label": `Go to Program ${segs[0].n}` });
+  segs.forEach((sg, k) => {
+    if (k > 0) page.append(el("span", { class: "gap" }));
+    if (sg.start) page.append(el("b", { text: `Program ${sg.n}` }));
+    const small = segs.length > 1 || !sg.start;
+    const codeBars = Math.max(1, Math.min(small ? 7 : 18, Math.round(sg.units * (small ? 0.45 : 0.6))));
+    page.append(miniBlock(sg.p, sg.start, codeBars, sg.end));
+  });
+  const p = segs.find(sg => sg.start)?.p || segs[0].p;
+  const go = () => goTo(p.id);
+  page.addEventListener("click", go);
+  page.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  return el("div", { class: "page-wrap" }, [page, el("div", { class: "page-cap", text: `p. ${pageNo}` })]);
+}
+function miniBlock(p, start, codeBars, end) {
+  const frag = document.createDocumentFragment();
+  if (start) {
+    const q = (p.question || "").trim();
+    const qLines = Math.max(1, Math.min(2, Math.ceil(q.length / 55)));
+    for (let i = 0; i < qLines; i++) frag.append(el("i", { style: `width:${i === qLines - 1 && qLines > 1 ? 55 : 92}%` }));
+    frag.append(el("span", { class: "lbl", text: "Code" }));
+  }
   const box = el("div", { class: "box" });
-  const lines = normalizeSrc(p.code).split("\n").slice(0, 22);
-  lines.forEach(l => {
+  normalizeSrc(p.code).split("\n").slice(0, codeBars).forEach(l => {
     const t = l.trimStart(); const ind = l.length - t.length;
     const cls = /^#/.test(t) ? "c" : /^(def|class|for|while|if|elif|else|try|except|return|import|from)\b/.test(t) ? "k" : /^["']/.test(t) ? "s" : "";
     box.append(el("i", { class: cls, style: `margin-left:${Math.min(ind, 16) * 2.2}%;width:${t ? Math.max(8, Math.min(t.length, 46) * 2) : 0}%` }));
   });
-  page.append(box);
-  page.append(el("span", { class: "lbl", text: "Input / Output" }));
-  const ob = el("div", { class: "box out" });
-  normalizeSrc(p.output).split("\n").filter(Boolean).slice(0, 4).forEach(l => ob.append(el("i", { style: `width:${Math.max(8, Math.min(l.length, 46) * 2)}%` })));
-  if (!ob.children.length) ob.append(el("i", { style: "width:0" }));
-  page.append(ob);
-  const go = () => { const c = cards.get(p.id); if (!c) return; c.node.scrollIntoView({ block: "start", behavior: "smooth" }); c.node.classList.remove("flash"); void c.node.offsetWidth; c.node.classList.add("flash"); };
-  page.addEventListener("click", go);
-  page.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
-  return el("div", { class: "page-wrap" }, [page, el("div", { class: "page-cap", text: `p. ${n}` })]);
+  frag.append(box);
+  if (end) {
+    frag.append(el("span", { class: "lbl", text: "Input / Output" }));
+    const ob = el("div", { class: "box out" });
+    normalizeSrc(p.output).split("\n").filter(Boolean).slice(0, 3).forEach(l => ob.append(el("i", { style: `width:${Math.max(8, Math.min(l.length, 46) * 2)}%` })));
+    if (!ob.children.length) ob.append(el("i", { style: "width:0" }));
+    frag.append(ob);
+  }
+  return frag;
 }
 function refreshPanel() {
   const ps = state.programs;
   const attention = ps.filter(p => statusOf(p).cls !== "ok").length;
-  const pages = ps.length + (state.settings.cover && ps.length ? 1 : 0);
+  const plan = estimatePages();
+  const pages = plan.length + (state.settings.cover && ps.length ? 1 : 0);
   const tally = $("tally");
   if (!ps.length) tally.textContent = "No programs yet";
   else {
-    tally.replaceChildren(`${ps.length} program${ps.length > 1 ? "s" : ""} · ${pages}+ pages · `);
+    tally.replaceChildren(`${ps.length} program${ps.length > 1 ? "s" : ""} · about ${pages} page${pages > 1 ? "s" : ""} · `);
     if (attention) {
       const first = ps.find(p => statusOf(p).cls !== "ok");
       const b = el("button", { type: "button", class: "linkish", title: "Show the first program that needs a look", text: `${attention} need${attention > 1 ? "" : "s"} a look` });
@@ -1382,7 +1603,12 @@ function refreshPanel() {
     ps.slice(0, 12).forEach(() => cv.append(el("i", { style: "width:86%;background:#DCE3E8" })));
     kids.push(el("div", { class: "page-wrap" }, [cv, el("div", { class: "page-cap", text: "cover" })]));
   }
-  ps.forEach((p, i) => kids.push(miniPage(p, i + 1)));
+  plan.forEach((segs, i) => kids.push(miniPage(segs, i + 1)));
+  const two = state.settings.perPage === 2;
+  document.querySelectorAll('input[name=perpage]').forEach(r => { r.checked = r.value === (two ? "2" : "1"); });
+  $("pp-note").textContent = two
+    ? "Programs follow one another, at most two on a page. If the second doesn\u2019t fit, it carries on to the next page."
+    : "Every program starts on a new page.";
   strip.replaceChildren(...kids);
   $("export-btn").disabled = !ps.length || exporting;
   $("export-pdf").disabled = !ps.length || exporting;
@@ -1451,6 +1677,11 @@ bindSetting("opt-cover", "cover", "checked");
 bindSetting("opt-colour", "colour", "checked");
 bindSetting("opt-look", "look", "value");
 bindSetting("opt-ver", "pyver", "value");
+document.querySelectorAll('input[name=perpage]').forEach(r => r.addEventListener("change", () => {
+  if (!r.checked) return;
+  state.settings.perPage = r.value === "2" ? 2 : 1;
+  refreshPanel(); save();
+}));
 renderList();
 refreshLook();
 updateActive();
