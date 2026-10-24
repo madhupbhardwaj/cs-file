@@ -21,6 +21,8 @@ Turn your Python programs into a ready-to-submit practical file. Add your code, 
 
 ## How to use
 
+A short illustrated guide is available as a PDF: [user-guide.pdf](user-guide.pdf).
+
 1. Add your programs by uploading `.py` files, pasting code, or clicking **Blank program**.
 2. Check each program's **Question**.
 3. In **Sample Input**, type what you would enter for each `input()`, one line per call.
@@ -90,6 +92,7 @@ For these programs, run them on your computer and paste the output into **Sample
 | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | Site icons |
 | `og-image.png` | Preview image shown when the link is shared |
 | `screenshot.png` | Screenshot used in this README |
+| `user-guide.pdf` | Three-page user guide, linked from the top of the site |
 
 ## Running locally
 

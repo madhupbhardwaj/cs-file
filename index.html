@@ -73,6 +73,8 @@ header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: 
 header.top h1 { font-size: clamp(1.7rem, 3.4vw, 2.3rem); font-weight: 700; line-height: 1.1; }
 header.top h1 span { color: var(--accent); }
 header.top p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.guide-link { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.guide-link:hover { color: var(--ink); }
 header.top > div:first-child { min-width: 0; flex: 1 1 420px; }
 .top-right { flex: none; align-self: flex-start; margin-left: auto; display: flex; align-items: center; gap: 14px; }
 .top-right .credit { margin: 0; align-self: auto; }
@@ -388,7 +390,7 @@ html.intro-on, html.intro-on body { overflow: hidden; }
   <header class="top">
     <div>
       <h1>Python <span>Practical File</span> Maker</h1>
-      <p>Add your Python programs, run them here to fill in the output, and download a Word or PDF file with each program on its own page: question, code, sample input and sample output.</p>
+      <p>Add your Python programs, run them here to fill in the output, and download a Word or PDF file with each program on its own page: question, code, sample input and sample output. <a class="guide-link" href="/user-guide.pdf" target="_blank" rel="noopener">Read the user guide (PDF)</a></p>
     </div>
     <div class="top-right">
       <div class="credit">Built by <b>Madhup</b></div>
