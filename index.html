@@ -237,6 +237,13 @@ html.modal-on, html.modal-on body { overflow: hidden; }
 .fb-details summary:hover { color: var(--ink); }
 .fb-details p { margin: 6px 0 0; font-size: .85rem; line-height: 1.5; color: var(--muted); }
 .fb-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.clr-card { max-width: 420px; }
+.clr-card h2 { font-size: 1.2rem; font-weight: 700; }
+.clr-card p { margin: 8px 0 18px; color: var(--muted); }
+button.danger { background: var(--bad); border-color: var(--bad); color: var(--sheet); }
+button.danger:hover { filter: brightness(1.08); }
+.clear-all { margin-top: 10px; font-size: .82rem; color: var(--muted); }
+.clear-all:hover { color: var(--bad); }
 .fb-status { flex: 1 1 100%; order: -1; font-size: .86rem; color: var(--muted); min-width: 0; }
 .fb-status:empty { display: none; }
 .fb-status.bad { color: var(--bad); }
@@ -439,6 +446,7 @@ html.intro-on, html.intro-on body { overflow: hidden; }
         <nav aria-label="Programs">
           <div class="sec-label"><span>Programs</span><span class="sec-right"><em>click to jump</em><button type="button" class="add-mini" id="panel-add" title="Add a blank program" aria-label="Add a blank program"><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8h10"/></svg>New</button></span></div>
           <ol class="plist" id="plist"></ol>
+          <button type="button" class="linkish clear-all" id="clear-all" hidden>Remove all programs</button>
         </nav>
         <details class="settings" id="settings" open>
           <summary>File settings</summary>
@@ -475,6 +483,16 @@ html.intro-on, html.intro-on body { overflow: hidden; }
         <button type="button" class="linkish fb-link" id="fb-open-2" hidden>Something not working? Send feedback</button>
       </div>
     </aside>
+  </div>
+</div>
+<div class="fb-overlay" id="clr" hidden>
+  <div class="fb-card clr-card" role="alertdialog" aria-modal="true" aria-labelledby="clr-title" aria-describedby="clr-text">
+    <h2 id="clr-title">Remove all programs?</h2>
+    <p id="clr-text"></p>
+    <div class="fb-actions">
+      <button type="button" class="ghost" id="clr-cancel">Cancel</button>
+      <button type="button" class="danger" id="clr-ok">Remove all</button>
+    </div>
   </div>
 </div>
 <div class="fb-overlay" id="fb" hidden>
@@ -1585,6 +1603,39 @@ function removeProgram(id) {
   renderList(); save();
   toast(`Deleted Program ${i + 1}.`, () => { state.programs.splice(i, 0, p); renderList(); save(); });
 }
+/* Remove all programs, after the person confirms. Undo is offered for a few seconds afterwards. */
+let clrOpener = null;
+function openClearAll() {
+  const n = state.programs.length;
+  if (!n || exporting) return;
+  clrOpener = document.activeElement;
+  $("clr-text").textContent = `This removes ${n === 1 ? "your program" : `all ${n} programs`}, including the code, sample input and sample output. Your file settings stay as they are.`;
+  $("clr-ok").textContent = n === 1 ? "Remove program" : `Remove ${n} programs`;
+  $("clr").hidden = false; document.documentElement.classList.add("modal-on");
+  $("clr-cancel").focus(); // the safe choice is focused, so pressing Enter by habit doesn't delete anything
+}
+function closeClearAll() {
+  $("clr").hidden = true; document.documentElement.classList.remove("modal-on");
+  if (clrOpener && clrOpener.isConnected) clrOpener.focus();
+}
+function clearAll() {
+  const removed = state.programs;
+  removed.forEach(p => { if (p.running) stopRun(p); });
+  state.programs = [];
+  closeClearAll();
+  renderList(); refreshExamples(); save();
+  toast(removed.length === 1 ? "Removed 1 program." : `Removed ${removed.length} programs.`, () => { state.programs = removed; renderList(); refreshExamples(); save(); });
+}
+$("clear-all").addEventListener("click", openClearAll);
+$("clr-cancel").addEventListener("click", closeClearAll);
+$("clr-ok").addEventListener("click", clearAll);
+$("clr").addEventListener("mousedown", (e) => { if (e.target === $("clr")) closeClearAll(); });
+document.addEventListener("keydown", (e) => {
+  if ($("clr").hidden) return;
+  if (e.key === "Escape") { e.preventDefault(); closeClearAll(); }
+  else if (e.key === "Tab") { e.preventDefault(); (document.activeElement === $("clr-ok") ? $("clr-cancel") : $("clr-ok")).focus(); }
+});
+
 function move(id, d) {
   const i = state.programs.findIndex(p => p.id === id), j = i + d;
   if (i < 0 || j < 0 || j >= state.programs.length) return;
@@ -1773,6 +1824,7 @@ function refreshPanel() {
   const plan = estimatePages();
   const pages = plan.length + (state.settings.cover && ps.length ? 1 : 0);
   const tally = $("tally");
+  $("clear-all").hidden = !ps.length;
   if (!ps.length) tally.textContent = "No programs yet";
   else {
     tally.replaceChildren(`${ps.length} program${ps.length > 1 ? "s" : ""} · about ${pages} page${pages > 1 ? "s" : ""} · `);
