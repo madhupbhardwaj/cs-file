@@ -76,24 +76,21 @@ header.top p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
 .guide-link { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
 .guide-link:hover { color: var(--ink); }
 header.top > div:first-child { min-width: 0; flex: 1 1 420px; }
-.top-right { flex: none; align-self: flex-start; margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.top-right { flex: none; align-self: flex-start; margin-left: auto; display: flex; align-items: center; gap: 16px; }
 .top-right .credit { margin: 0; align-self: auto; }
-.fb-btn { font: 500 .8rem/1 var(--f-body); padding: 7px 10px; gap: 6px; background: transparent; color: var(--muted); border-color: var(--line); }
-.fb-btn:hover { color: var(--ink); }
-.fb-btn svg.i { width: 14px; height: 14px; }
-.gh-col { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.ps-link { font: 500 .78rem/1.2 var(--f-body); color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
-.ps-link:hover { color: var(--accent); }
-.ps-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.gh-star { display: inline-flex; align-items: center; gap: 7px; font: 600 .8rem/1 var(--f-body); padding: 7px 11px; border: 1px solid var(--line); border-radius: var(--r); background: var(--sheet); color: var(--ink); text-decoration: none; white-space: nowrap; transition: border-color .2s ease, color .2s ease; }
-.gh-star:hover { border-color: var(--accent); color: var(--accent); }
-.gh-star:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.gh-star .gh-mark { width: 16px; height: 16px; flex: none; }
+.hdr-links { display: flex; align-items: center; gap: 8px; }
+.hdr-btn, .top-right .fb-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 12px; font: 500 .82rem/1 var(--f-body); border: 1px solid var(--line); border-radius: var(--r); background: transparent; color: var(--muted); text-decoration: none; white-space: nowrap; cursor: pointer; transition: border-color .2s ease, color .2s ease, background-color .2s ease; }
+.hdr-btn:hover, .top-right .fb-btn:hover { border-color: var(--accent); color: var(--accent); }
+.hdr-btn:focus-visible, .top-right .fb-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hdr-btn svg, .top-right .fb-btn svg.i { width: 15px; height: 15px; flex: none; }
+.hdr-btn.gh-star { background: var(--sheet); color: var(--ink); font-weight: 600; }
+.hdr-btn.gh-star:hover { color: var(--accent); }
+.hdr-btn .ext { width: 11px; height: 11px; opacity: .6; margin-left: -2px; }
 .credit { flex: none; align-self: flex-start; margin-left: auto; margin-top: 6px; display: inline-flex; align-items: center; gap: 9px; font: 500 .74rem/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); opacity: .55; white-space: nowrap; transition: opacity .25s ease; user-select: none; }
 .credit::before { content: ""; width: 22px; height: 1px; background: currentColor; opacity: .7; }
 .credit b { font-weight: 600; color: var(--ink); letter-spacing: .14em; }
 .credit:hover { opacity: .9; }
-@media (max-width: 640px) { .top-right { order: -1; width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 10px 14px; } .credit { font-size: .68rem; } }
+@media (max-width: 640px) { .top-right { order: -1; width: 100%; flex-wrap: wrap; gap: 12px 8px; } .top-right .credit { width: 100%; font-size: .68rem; } .hdr-links { display: contents; } .hdr-btn, .top-right .fb-btn { flex: 1 1 auto; padding: 0 10px; } }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } aside.panel { position: static !important; order: -1; } }
 
@@ -413,11 +410,11 @@ html.intro-on, html.intro-on body { overflow: hidden; }
     </div>
     <div class="top-right">
       <div class="credit">Built by <b>Madhup</b></div>
-      <div class="gh-col">
-        <a class="gh-star" href="https://github.com/madhupbhardwaj/cs-file" target="_blank" rel="noopener" aria-label="Star this project on GitHub to support it" title="Star this project on GitHub"><svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>Star on GitHub to support</span></a>
-        <a class="ps-link" href="https://problemset.in" target="_blank" rel="noopener">Visit problemset.in</a>
+      <div class="hdr-links">
+        <a class="hdr-btn gh-star" href="https://github.com/madhupbhardwaj/cs-file" target="_blank" rel="noopener" aria-label="Star this project on GitHub (opens in a new tab)" title="Star this project on GitHub to support it"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>Star on GitHub</span></a>
+        <a class="hdr-btn" href="https://madhupbhardwaj.is-a.dev" target="_blank" rel="noopener" aria-label="Madhup's portfolio (opens in a new tab)" title="madhupbhardwaj.is-a.dev"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M1.75 8h12.5M8 1.75c1.7 1.8 2.5 3.9 2.5 6.25S9.7 12.45 8 14.25C6.3 12.45 5.5 10.35 5.5 8S6.3 3.55 8 1.75z"/></svg><span>Portfolio</span><svg class="ext" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 2.5h5v5M9.5 2.5 3 9"/></svg></a>
+        <button type="button" class="fb-btn" id="fb-open" hidden><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/></svg>Feedback</button>
       </div>
-      <button type="button" class="fb-btn" id="fb-open" hidden><svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/></svg>Feedback</button>
     </div>
   </header>
 
