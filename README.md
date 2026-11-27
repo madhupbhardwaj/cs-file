@@ -12,7 +12,7 @@ Turn your Python programs into a ready-to-submit practical file. Add your code, 
 - **Questions filled in automatically.** The comment or docstring at the top of each program becomes its question.
 - **Runs your code in the browser.** Sample output is produced by actually running the program with your sample input.
 - **Stop button.** Programs run in the background, so an endless loop never freezes the page. Press **Stop** to end a run at any time; anything already printed is kept.
-- **Python IDLE look, live.** While you edit, code appears in an IDLE editor window and output in an IDLE Shell window, using IDLE's own colours. Choose **IDLE (Mac style)**, **IDLE (Windows style)** with the Windows title bar and menu bar, or **Simple boxes**. What you see is what you download.
+- **Python IDLE look, live.** While you edit, code appears in an IDLE editor window and output in an IDLE Shell window, using IDLE's own colours. Choose **IDLE (Mac style)**, **IDLE (Windows style)** with the Windows title bar and menu bar, or **Simple boxes**. In the Windows style you can set the folder shown in the title bar (type your name to get `C:\Users\your name`); it's remembered. What you see is what you download.
 - **Word and PDF export.** Choose one program per page, or two per page to save paper. An optional cover page lists every program.
 - **Program list.** The sidebar lists every program with its status, so you can jump to any one.
 - **Saves as you go.** Your programs are kept in your browser between visits.
