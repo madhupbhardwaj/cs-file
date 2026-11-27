@@ -212,6 +212,7 @@ aside.panel h2 { font-size: 1.05rem; font-weight: 700; }
 .pages.idle .page .box { background: #FFFFFF; border: 0.5px solid #9A9AA0; border-top: 3px solid #2D2D30; border-radius: 0; }
 .pages.idle .page i.k { background: #F5B27A; } .pages.idle .page i.c { background: #EE9A9A; } .pages.idle .page i.s { background: #8FD08F; }
 .pages.idle .page .box.out i { background: #8C9CF0; }
+.pages.idle.win .page .box { border: 0.5px solid #A0A0A0; border-top: 4px solid #E4E4E4; }
 .page .gap { display: block; height: 4px; flex: none; }
 .page .lbl { font: 600 4.5px/1 var(--f-body); color: #1E3A5F; text-transform: uppercase; margin-top: 2px; }
 .page.cover { justify-content: flex-start; align-items: center; text-align: center; }
@@ -291,6 +292,20 @@ button.danger:hover { filter: brightness(1.08); }
 .look-simple .win.editor { --w-bg: #F3F6F8; }
 .look-simple .win-bar, .look-simple .shell-side { display: none; }
 .look-simple .t-com { font-style: italic; }
+/* "IDLE (Windows style)": white title bar with icon and window buttons, a menu bar, Courier New like IDLE on Windows */
+.win-head { flex: none; }
+.win-ico, .win-ctl, .win-menu { display: none; }
+.look-windows .win { --f-idle: "Courier New", Courier, "Liberation Mono", "Nimbus Mono PS", monospace; border-color: #A0A0A0; border-radius: 0; box-shadow: 0 1px 3px rgb(0 0 0 / .08), 0 10px 22px -14px rgb(0 0 0 / .35); }
+.look-windows .win-bar { height: 30px; padding: 0 0 0 9px; gap: 8px; background: #FFFFFF; }
+.look-windows .win-bar i { display: none; }
+.look-windows .win-ico { display: block; width: 16px; height: 16px; flex: none; }
+.look-windows .win-title { flex: 1 1 auto; margin-left: 0; font: 400 12px/1 "Segoe UI", system-ui, Arial, sans-serif; color: #1F1F1F; }
+.look-windows .win-ctl { display: flex; flex: none; align-self: stretch; }
+.look-windows .win-ctl svg { width: 42px; height: 100%; fill: none; stroke: #1F1F1F; stroke-width: 1; }
+.look-windows .win-menu { display: flex; align-items: center; height: 22px; padding: 0 3px; background: #FFFFFF; border-bottom: 1px solid #E5E5E5; font: 400 12px/1 "Segoe UI", system-ui, Arial, sans-serif; color: #000000; white-space: nowrap; overflow: hidden; user-select: none; -webkit-user-select: none; }
+.win-menu span { padding: 0 6px; }
+@media (max-width: 640px) { .look-windows .win-ctl svg { width: 32px; } .win-menu span { padding: 0 5px; } }
+.look-windows .shell-side { border-right: 1px solid #A0A0A0; }
 .no-colour .win.editor .ed > pre span { color: inherit; font-style: normal; }
 /* ---------- Opening animation: one deliberate dark look, same in both themes ---------- */
 #intro { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 100; background: #0D1828; color: #EAF0F6; overflow: hidden; display: grid; place-items: center; cursor: pointer;
@@ -472,7 +487,7 @@ html.intro-on, html.intro-on body { overflow: hidden; }
             </div>
             <div class="pair">
               <label class="f" for="opt-look"><span>Code style</span>
-                <select id="opt-look"><option value="idle">IDLE windows</option><option value="simple">Simple boxes</option></select></label>
+                <select id="opt-look"><option value="idle">IDLE (Mac style)</option><option value="windows">IDLE (Windows style)</option><option value="simple">Simple boxes</option></select></label>
               <label class="f" for="opt-ver" id="ver-wrap"><span>Version</span><input type="text" id="opt-ver" placeholder="3.13" inputmode="decimal"></label>
             </div>
             <label class="check" for="opt-cover"><input type="checkbox" id="opt-cover" checked><span>Cover page with an index of programs</span></label>
@@ -626,7 +641,7 @@ function xesc(s) {
 }
 
 const DOCX_COLOURS = { kw: "7B2FA0", bi: "1A5FB4", str: "2E7D32", com: "6B7680", num: "B45309", fn: "0E6E7A" };
-const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"';
 const CONTENT_W = 9026; // A4 width minus 1" margins, in twentieths of a point
 
 function run(text, opts = {}) {
@@ -635,6 +650,7 @@ function run(text, opts = {}) {
   if (opts.b) rpr += "<w:b/>";
   if (opts.i) rpr += "<w:i/>";
   if (opts.color) rpr += `<w:color w:val="${opts.color}"/>`;
+  if (opts.spacing) rpr += `<w:spacing w:val="${opts.spacing}"/>`;
   if (opts.sz) rpr += `<w:sz w:val="${opts.sz}"/><w:szCs w:val="${opts.sz}"/>`;
   return `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ""}<w:t xml:space="preserve">${xesc(text)}</w:t></w:r>`;
 }
@@ -667,6 +683,12 @@ function textParas(text, style) {
 /* ---------- Python IDLE look (IDLE Classic colours) ---------- */
 const IDLE = { kw: "FF7700", bi: "900090", str: "00AA00", com: "DD0000", fn: "0000FF", out: "0000FF", in: "000000", err: "FF0000", console: "770000", title: "2D2D30", titleText: "D4D4D8", frame: "8E8E93", side: "1C1C1E" };
 const IDLE_DOTS = ["FF5F57", "FEBC2E", "28C840"];
+/* IDLE as it looks on Windows: white title bar, menu bar, thin grey frame */
+const WINIDLE = { frame: "A0A0A0", text: "1F1F1F", menuLine: "E5E5E5", side: "A0A0A0" };
+/* Python logo (from the MIT-licensed devicon set; Python is a trademark of the Python Software Foundation), 128 px PNG, used in the Windows title bar */
+const PY_ICON_PNG = "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";
+const WIN_MENUS = { editor: ["File", "Edit", "Format", "Run", "Options", "Window", "Help"], shell: ["File", "Edit", "Shell", "Debug", "Options", "Window", "Help"] };
+const winTitle = (file, ver) => `${file} - C:\\Users\\Student\\Desktop\\${file} (${ver})`;
 
 /* Split a run's output into printed (out), typed (in) and error (err) parts when no exact record exists. */
 function segmentOutput(output, input) {
@@ -695,13 +717,36 @@ function codeTokens(text, colour) {
   if (!src) return [[]];
   return colour ? highlight(src) : src.split("\n").map(l => l ? [{ t: l, k: "" }] : []);
 }
-function idleTable(grid, rowsXml) {
-  const b = (side) => `<w:${side} w:val="single" w:sz="6" w:space="0" w:color="${IDLE.frame}"/>`;
+function idleTable(grid, rowsXml, win) {
+  const b = (side) => `<w:${side} w:val="single" w:sz="6" w:space="0" w:color="${win ? WINIDLE.frame : IDLE.frame}"/>`;
   return `<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_W}" w:type="dxa"/><w:tblBorders>${b("top")}${b("left")}${b("bottom")}${b("right")}</w:tblBorders><w:tblLayout w:type="fixed"/>` +
     `<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="150" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="150" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr>` +
     `<w:tblGrid>${grid.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rowsXml}</w:tbl>`;
 }
-function idleTitleRow(title, span, keep = true) {
+/* The Python logo as a small inline picture (word/media/python.png, relationship rIdPyIcon) */
+let pyPicId = 0;
+function pyIconRun(pt) {
+  const e = Math.round(pt * 12700), id = ++pyPicId;
+  return `<w:r><w:rPr><w:position w:val="-3"/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${e}" cy="${e}"/><wp:docPr id="${id}" name="Python logo ${id}"/>` +
+    `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+    `<pic:nvPicPr><pic:cNvPr id="${id}" name="python.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdPyIcon"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+    `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${e}" cy="${e}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+}
+/* Windows title bar (icon, title, window buttons) and menu bar, as two table rows */
+function winTitleRows(title, kind, span, keep) {
+  const spanXml = span > 1 ? `<w:gridSpan w:val="${span}"/>` : "";
+  const keepXml = keep ? "<w:keepNext/>" : '<w:keepNext w:val="0"/>';
+  const icon = pyIconRun(10.5);
+  const ctl = run("\u2013", { color: WINIDLE.text, font: "Arial", sz: 20 }) + run("     \u25A1     \u00D7", { color: WINIDLE.text, font: "Arial", sz: 20 });
+  const titleP = `<w:p><w:pPr><w:pStyle w:val="IdleTitle"/>${keepXml}<w:tabs><w:tab w:val="right" w:pos="${CONTENT_W - 330}"/></w:tabs></w:pPr>` +
+    icon + run("  " + title, { color: WINIDLE.text, font: "Segoe UI", sz: 17 }) + "<w:r><w:tab/></w:r>" + ctl + "</w:p>";
+  const menuP = `<w:p><w:pPr><w:pStyle w:val="IdleMenu"/>${keepXml}</w:pPr>${run(WIN_MENUS[kind].join("    "), { color: "000000", font: "Segoe UI", sz: 17 })}</w:p>`;
+  const cell = (inner, extra) => `<w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${spanXml}${extra}<w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/></w:tcPr>${inner}</w:tc>`;
+  return `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="400" w:hRule="exact"/></w:trPr>${cell(titleP, "")}</w:tr>` +
+    `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="300" w:hRule="exact"/></w:trPr>${cell(menuP, `<w:tcBorders><w:bottom w:val="single" w:sz="4" w:space="0" w:color="${WINIDLE.menuLine}"/></w:tcBorders>`)}</w:tr>`;
+}
+function idleTitleRow(title, span, keep = true, win = false) {
+  if (win) return winTitleRows(title, span > 1 ? "shell" : "editor", span, keep);
   const dots = IDLE_DOTS.map(c => run("●", { color: c, font: "Arial", sz: 30 })).join(run(" ", { font: "Arial", sz: 14 }));
   return `<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="440" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ""}` +
     `<w:shd w:val="clear" w:color="auto" w:fill="${IDLE.title}"/><w:tcMar><w:top w:w="40" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/></w:tcMar></w:tcPr>` +
@@ -709,18 +754,18 @@ function idleTitleRow(title, span, keep = true) {
 }
 const idleRunsXml = (runs, colour) => runs.map(tk => run(tk.t, { color: colour ? IDLE[tk.k] : undefined })).join("");
 /* IDLE editor window: dark title bar, white page, IDLE Classic syntax colours */
-function idleEditor(title, code, colour) { return idleEditorXml(title, codeTokens(code, true), colour, true); }
-function idleEditorXml(title, lines, colour, keep) {
-  const paras = lines.map(line => para(idleRunsXml(line, colour), { style: "IdleCode" })).join("");
+function idleEditor(title, code, colour, win) { return idleEditorXml(title, codeTokens(code, true), colour, true, win); }
+function idleEditorXml(title, lines, colour, keep, win) {
+  const paras = lines.map(line => para(idleRunsXml(line, colour), { style: win ? "IdleCodeWin" : "IdleCode" })).join("");
   const mar = `<w:tcMar><w:top w:w="110" w:type="dxa"/><w:bottom w:w="150" w:type="dxa"/></w:tcMar>`;
-  return idleTable([CONTENT_W], (title ? idleTitleRow(title, 1, keep) : "") + `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`);
+  return idleTable([CONTENT_W], (title ? idleTitleRow(title, 1, keep, win) : "") + `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`, win);
 }
 /* Plain white IDLE-style box for the typed input */
-function idleInputBox(text) { return idleInputXml(codeTokens(text, false).map(line => line.map(r => ({ t: r.t, k: "in" })))); }
-function idleInputXml(lines) {
-  const paras = lines.map(line => para(idleRunsXml(line, true), { style: "IdleCode" })).join("");
+function idleInputBox(text, win) { return idleInputXml(codeTokens(text, false).map(line => line.map(r => ({ t: r.t, k: "in" }))), win); }
+function idleInputXml(lines, win) {
+  const paras = lines.map(line => para(idleRunsXml(line, true), { style: win ? "IdleCodeWin" : "IdleCode" })).join("");
   const mar = `<w:tcMar><w:top w:w="100" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/></w:tcMar>`;
-  return idleTable([CONTENT_W], `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`);
+  return idleTable([CONTENT_W], `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CONTENT_W}" w:type="dxa"/>${mar}</w:tcPr>${paras}</w:tc></w:tr>`, win);
 }
 /* IDLE Shell window: prompt sidebar, blue output, black typed input, red errors */
 const IDLE_SIDE_W = 820;
@@ -729,19 +774,22 @@ function shellRows(segs) {
   rows.push({ side: ">>>", runs: [] });
   return rows;
 }
-function idleShell(title, segs) { return idleShellXml(title, shellRows(segs), true); }
-function idleShellXml(title, rows, keep) {
-  let xml = title ? idleTitleRow(title, 2, keep) : "";
+function idleShell(title, segs, win) { return idleShellXml(title, shellRows(segs), true, win); }
+function idleShellXml(title, rows, keep, win) {
+  const style = win ? "IdleCodeWin" : "IdleCode";
+  const sideBorder = win ? `<w:right w:val="single" w:sz="4" w:space="0" w:color="${WINIDLE.side}"/>` : `<w:right w:val="single" w:sz="12" w:space="0" w:color="${IDLE.side}"/>`;
+  let xml = title ? idleTitleRow(title, 2, keep, win) : "";
   rows.forEach((r, i) => {
     const mar = `<w:tcMar><w:top w:w="${i === 0 ? 110 : 0}" w:type="dxa"/><w:bottom w:w="${i === rows.length - 1 ? 150 : 0}" w:type="dxa"/></w:tcMar>`;
     xml += `<w:tr><w:trPr><w:cantSplit/></w:trPr>` +
-      `<w:tc><w:tcPr><w:tcW w:w="${IDLE_SIDE_W}" w:type="dxa"/><w:tcBorders><w:right w:val="single" w:sz="12" w:space="0" w:color="${IDLE.side}"/></w:tcBorders>${mar.replace("</w:tcMar>", '<w:left w:w="90" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tcMar>')}</w:tcPr>${para(r.side ? run(r.side, { color: IDLE.console }) : "", { style: "IdleCode" })}</w:tc>` +
-      `<w:tc><w:tcPr><w:tcW w:w="${CONTENT_W - IDLE_SIDE_W}" w:type="dxa"/>${mar}</w:tcPr>${para(idleRunsXml(r.runs, true), { style: "IdleCode" })}</w:tc></w:tr>`;
+      `<w:tc><w:tcPr><w:tcW w:w="${IDLE_SIDE_W}" w:type="dxa"/><w:tcBorders>${sideBorder}</w:tcBorders>${mar.replace("</w:tcMar>", '<w:left w:w="90" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tcMar>')}</w:tcPr>${para(r.side ? run(r.side, { color: IDLE.console }) : "", { style })}</w:tc>` +
+      `<w:tc><w:tcPr><w:tcW w:w="${CONTENT_W - IDLE_SIDE_W}" w:type="dxa"/>${mar}</w:tcPr>${para(idleRunsXml(r.runs, true), { style })}</w:tc></w:tr>`;
   });
-  return idleTable([IDLE_SIDE_W, CONTENT_W - IDLE_SIDE_W], xml);
+  return idleTable([IDLE_SIDE_W, CONTENT_W - IDLE_SIDE_W], xml, win);
 }
 const pyVersion = (settings) => ((settings.pyver || "").trim() || "3.13");
 const progFile = (p, idx) => p.file || `program_${idx + 1}.py`;
+const editorTitle = (settings, file) => settings.look === "windows" ? winTitle(file, pyVersion(settings)) : `${file} (${pyVersion(settings)})`;
 
 function firstLine(q, n) {
   const s = (q || "").replace(/\s+/g, " ").trim();
@@ -772,13 +820,13 @@ function buildDocumentXml(settings, programs) {
     body += para(run("Question"), { style: "Label", keepNext: true });
     const qText = tidyQuestion(p.question || "");
     body += qText ? textParas(qText, "Question") : para(run("(No question written)", { i: true, color: "8A969E" }), { style: "Question" });
-    const idle = settings.look !== "simple";
+    const idle = settings.look !== "simple", win = settings.look === "windows";
     body += para(run("Code"), { style: "Label", keepNext: true });
-    body += idle ? idleEditor(`${progFile(p, idx)} (${pyVersion(settings)})`, p.code, settings.colour) : boxTable(codeParas(p.code, settings.colour), "F3F6F8");
+    body += idle ? idleEditor(editorTitle(settings, progFile(p, idx)), p.code, settings.colour, win) : boxTable(codeParas(p.code, settings.colour), "F3F6F8");
     body += para(run("Sample Input"), { style: "Label", keepNext: true });
-    body += (p.input || "").trim() ? (idle ? idleInputBox(p.input) : boxTable(codeParas(p.input, false), "FFFFFF")) : para(run("No input needed.", { i: true, color: "57666F" }), { style: "Question" });
+    body += (p.input || "").trim() ? (idle ? idleInputBox(p.input, win) : boxTable(codeParas(p.input, false), "FFFFFF")) : para(run("No input needed.", { i: true, color: "57666F" }), { style: "Question" });
     body += para(run("Sample Output"), { style: "Label", keepNext: true });
-    body += idle ? idleShell(`IDLE Shell ${pyVersion(settings)}`, p.segs || segmentOutput(p.output, p.input)) : boxTable(codeParas(p.output || "", false), "FFFFFF");
+    body += idle ? idleShell(`IDLE Shell ${pyVersion(settings)}`, p.segs || segmentOutput(p.output, p.input), win) : boxTable(codeParas(p.output || "", false), "FFFFFF");
   });
   body += `<w:sectPr><w:footerReference w:type="default" r:id="rIdFooter1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="1440" w:bottom="1300" w:left="1440" w:header="708" w:footer="600" w:gutter="0"/>${hasCover ? '<w:titlePg/>' : ''}</w:sectPr>`;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document ${W_NS}><w:body>${body}</w:body></w:document>`;
@@ -822,13 +870,14 @@ function wrapRunLines(lines, maxChars) {
   return out;
 }
 // Heights in points. The page body is A4 minus the margins; SLACK stays empty at the bottom of each page.
-const FLOW = { body: (16838 - 1300 - 1300) / 20, slack: 24, gap: 22, mark: 1, head: 38, label: 28, qline: 17, qafter: 2, title: 22, border: 2 };
+const FLOW = { body: (16838 - 1300 - 1300) / 20, slack: 24, gap: 22, mark: 1, head: 38, label: 28, qline: 17, qafter: 2, title: 22, winTitle: 36, border: 2 };
 function flowData(p, settings) {
   const idle = settings.look !== "simple";
   const qText = tidyQuestion(p.question || "");
   const qLines = qText ? textLinesEstimate(qText, (CONTENT_W / 20) * 0.96, 12) : [1];
-  // Lines are wrapped ahead of time at a width that fits even the widest common monospace fonts
-  const CH = idle ? 72 : 76, CH_OUT = idle ? 65 : 76;
+  // Lines are wrapped ahead of time at a width that fits even the widest common monospace fonts (Courier New is wider still)
+  const win = settings.look === "windows";
+  const CH = win ? 68 : idle ? 72 : 76, CH_OUT = win ? 62 : idle ? 65 : 76;
   const row = (runs) => ({ side: "", runs });
   const code = wrapRunLines(codeTokens(p.code, true), CH).map(row);
   const input = (p.input || "").trim() ? wrapRunLines(codeTokens(p.input, false).map(l => l.map(r => ({ t: r.t, k: idle ? "in" : "" }))), CH).map(row) : null;
@@ -841,11 +890,11 @@ function flowData(p, settings) {
 }
 function flowLayout(settings, programs, data) {
   const idle = settings.look !== "simple", perPage = settings.perPage === 2 ? 2 : 1;
-  const F = FLOW, LIMIT = F.body - F.slack, lh = idle ? 13.5 : 12.5;
+  const F = FLOW, LIMIT = F.body - F.slack, lh = idle ? 13.5 : 12.5, TH = settings.look === "windows" ? F.winTitle : F.title;
   const partH = {
-    code: (n, t) => idle ? (t ? F.title : 0) + 5.5 + n * lh + 7.5 + F.border : 5 + n * lh + 5 + F.border,
+    code: (n, t) => idle ? (t ? TH : 0) + 5.5 + n * lh + 7.5 + F.border : 5 + n * lh + 5 + F.border,
     input: (n) => idle ? 5 + n * lh + 6 + F.border : 5 + n * lh + 5 + F.border,
-    out: (n, t) => idle ? (t ? F.title : 0) + 5.5 + n * lh + 7.5 + F.border : 5 + n * lh + 5 + F.border,
+    out: (n, t) => idle ? (t ? TH : 0) + 5.5 + n * lh + 7.5 + F.border : 5 + n * lh + 5 + F.border,
   };
   const pages = []; let page = null, used = 0, cur = -1;
   const open = (marker) => { page = { marker, items: [], progs: new Set() }; pages.push(page); used = marker ? F.mark : 0; if (cur >= 0) page.progs.add(cur); };
@@ -862,6 +911,10 @@ function flowLayout(settings, programs, data) {
       const left = rows.length - i;
       if (!page.items.length && n < 1) n = 1;                 // never loop on an empty page
       if (n < 1 || (n < 3 && left > n)) { open(true); continue; } // don't leave one or two stray lines at the bottom
+      if (left > n && left - n < 3) {                         // ...or carry just one or two over to the next page
+        if (left - 3 >= 3) n = left - 3;
+        else if (first && page.items.length > 1 && page.items[page.items.length - 1].t === "label") { page.items.pop(); used -= F.label; open(true); add({ t: "label", text: labelText }, F.label); continue; }
+      }
       add({ t: kind, idx: cur, from: i, to: i + n, title }, ph(n, title));
       i += n; first = false;
       if (i < rows.length) open(true);
@@ -890,7 +943,7 @@ function flowLayout(settings, programs, data) {
   return pages;
 }
 function flowBody(settings, programs) {
-  const idle = settings.look !== "simple", ver = pyVersion(settings);
+  const idle = settings.look !== "simple", win = settings.look === "windows", ver = pyVersion(settings);
   const data = programs.map(p => flowData(p, settings));
   const pages = flowLayout(settings, programs, data);
   const MARK = '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
@@ -908,14 +961,14 @@ function flowBody(settings, programs) {
       else if (it.t === "noinput") body += para(run("No input needed.", { i: true, color: "57666F" }), { style: "Question" });
       else if (it.t === "code") {
         const rows = d.code.slice(it.from, it.to);
-        body += idle ? idleEditorXml(it.title ? `${progFile(p, it.idx)} (${ver})` : null, rows.map(r => r.runs), settings.colour, false)
+        body += idle ? idleEditorXml(it.title ? editorTitle(settings, progFile(p, it.idx)) : null, rows.map(r => r.runs), settings.colour, false, win)
                      : boxTable(simpleRows(rows, settings.colour), "F3F6F8");
       } else if (it.t === "input") {
         const rows = d.input.slice(it.from, it.to);
-        body += idle ? idleInputXml(rows.map(r => r.runs)) : boxTable(simpleRows(rows, false), "FFFFFF");
+        body += idle ? idleInputXml(rows.map(r => r.runs), win) : boxTable(simpleRows(rows, false), "FFFFFF");
       } else if (it.t === "out") {
         const rows = d.out.slice(it.from, it.to);
-        body += idle ? idleShellXml(it.title ? `IDLE Shell ${ver}` : null, rows, false) : boxTable(simpleRows(rows, false), "FFFFFF");
+        body += idle ? idleShellXml(it.title ? `IDLE Shell ${ver}` : null, rows, false, win) : boxTable(simpleRows(rows, false), "FFFFFF");
       }
     });
   });
@@ -936,6 +989,8 @@ ${s("Label", "Section Label", '<w:keepNext/><w:spacing w:before="220" w:after="8
 ${s("Question", "Question", '<w:spacing w:after="40" w:line="340" w:lineRule="exact"/>', '<w:sz w:val="24"/><w:szCs w:val="24"/>')}
 ${s("Code", "Code", '<w:spacing w:before="0" w:after="0" w:line="250" w:lineRule="exact"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="19"/><w:szCs w:val="19"/>')}
 ${s("IdleCode", "IDLE Code", '<w:spacing w:before="0" w:after="0" w:line="270" w:lineRule="exact"/>', '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/><w:noProof/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
+${s("IdleCodeWin", "IDLE Code (Windows)", '<w:spacing w:before="0" w:after="0" w:line="270" w:lineRule="exact"/>', '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/><w:noProof/><w:sz w:val="20"/><w:szCs w:val="20"/>')}
+${s("IdleMenu", "IDLE Menu Bar", '<w:spacing w:before="0" w:after="0" w:line="250" w:lineRule="exact"/>', '<w:rFonts w:ascii="Segoe UI" w:hAnsi="Segoe UI" w:cs="Segoe UI"/><w:sz w:val="17"/><w:szCs w:val="17"/>')}
 ${s("IdleTitle", "IDLE Title Bar", '<w:spacing w:before="0" w:after="0" w:line="360" w:lineRule="exact"/>', '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="17"/><w:szCs w:val="17"/>')}
 ${s("Cell", "Table Cell", '<w:spacing w:before="0" w:after="0"/>', '<w:sz w:val="21"/><w:szCs w:val="21"/>')}
 ${s("Footer", "footer", '<w:spacing w:after="0"/>', '<w:color w:val="7A8790"/><w:sz w:val="18"/><w:szCs w:val="18"/>')}
@@ -949,13 +1004,16 @@ function footerXml(title) {
 async function buildDocx(JSZipCtor, settings, programs, outType) {
   const title = (settings.title || "").trim() || "Python Practical File";
   const zip = new JSZipCtor();
+  const withIcon = settings.look === "windows";
+  pyPicId = 0;
   const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
   zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`);
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>`);
   zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`);
   zip.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`);
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${withIcon ? '<Relationship Id="rIdPyIcon" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/python.png"/>' : ""}</Relationships>`);
+  if (withIcon) zip.file("word/media/python.png", PY_ICON_PNG, { base64: true });
   zip.file("word/settings.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>`);
   zip.file("word/styles.xml", stylesXml());
@@ -1002,7 +1060,7 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
   }
   function label(text) {
     y += 9;
-    ensure(10 + 4 + 17 + 13 + 2 * 13.4);
+    ensure(10 + 4 + I_HEAD + 13 + 2 * 13.4); // label + window head + first lines stay together
     font("helvetica", "bold", 9.5, COL.accent);
     doc.setCharSpace(0.5); doc.text(pdfSafe(text.toUpperCase()), L, y + 8); doc.setCharSpace(0);
     y += 14;
@@ -1043,7 +1101,8 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
       const fit = Math.floor((BOTTOM - y - 2 * PAD_Y) / CODE_LH);
       const left = lines.length - i;
       if (fit < 1 || (fit < 3 && left > fit)) { newPage(); continue; }
-      const n = Math.min(fit, left);
+      let n = Math.min(fit, left);
+      if (left > n && left - n < 3 && left - 3 >= 3) n = left - 3; // don't carry one or two lines over on their own
       const h = n * CODE_LH + 2 * PAD_Y;
       doc.setFillColor(fill); doc.setDrawColor(COL.border); doc.setLineWidth(0.5);
       doc.rect(L, y, W, h, "FD");
@@ -1062,7 +1121,11 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
   }
 
   /* ---------- IDLE windows ---------- */
-  const I_FS = 9.5, I_LH = 13.4, I_TITLE = 17, I_PADX = 9, I_SIDE = 27, I_CW = I_FS * MONO_W;
+  // "IDLE (Windows style)" uses Courier, IDLE's font on Windows, and a taller head: title bar plus menu bar
+  const WINLOOK = settings.look === "windows", I_FONT = WINLOOK ? "courier" : MONO;
+  const I_FS = 9.5, I_LH = 13.4, I_TITLE = 17, I_PADX = 9, I_SIDE = 27, I_CW = I_FS * (WINLOOK ? 0.6 : MONO_W);
+  const W_BAR = 17, W_MENU = 13, I_HEAD = WINLOOK ? W_BAR + W_MENU : I_TITLE;
+  const iSafe = (t) => WINLOOK ? pdfSafe(t) : monoSafe(t);
   const hex = (h) => "#" + h;
   function wrapRuns(lines, maxChars) {
     const out = [];
@@ -1088,6 +1151,26 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
     font("helvetica", "bold", 8, hex(IDLE.titleText));
     doc.text(pdfSafe(text), L + 50, cy + 2.8);
   }
+  function winTitleBar(text, top, kind) {
+    doc.setFillColor("#FFFFFF"); doc.rect(L, top, W, I_HEAD, "F");
+    const cy = top + W_BAR / 2;
+    doc.addImage("data:image/png;base64," + PY_ICON_PNG, "PNG", L + 7, cy - 5.25, 10.5, 10.5, "pyicon");
+    // window buttons: minimise, maximise, close
+    doc.setDrawColor("#" + WINIDLE.text); doc.setLineWidth(0.55);
+    const bx = (k) => R - 11 - k * 22;
+    doc.line(bx(2) - 3.5, cy, bx(2) + 3.5, cy);
+    doc.rect(bx(1) - 3.3, cy - 3.3, 6.6, 6.6, "S");
+    doc.line(bx(0) - 3.3, cy - 3.3, bx(0) + 3.3, cy + 3.3); doc.line(bx(0) - 3.3, cy + 3.3, bx(0) + 3.3, cy - 3.3);
+    font("helvetica", "normal", 7.8, "#" + WINIDLE.text);
+    let t = pdfSafe(text); const room = bx(2) - 14 - (L + 23);
+    while (t.length > 4 && doc.getTextWidth(t) > room) t = t.slice(0, -2);
+    if (t !== pdfSafe(text)) t = t.replace(/.$/, "") + "...";
+    doc.text(t, L + 23, cy + 2.7);
+    font("helvetica", "normal", 7.6, "#000000");
+    let x = L + 7;
+    WIN_MENUS[kind].forEach(m => { doc.text(m, x, top + W_BAR + W_MENU / 2 + 2.6); x += doc.getTextWidth(m) + 11; });
+    doc.setDrawColor("#" + WINIDLE.menuLine); doc.setLineWidth(0.6); doc.line(L, top + I_HEAD, R, top + I_HEAD);
+  }
   // Draws an IDLE-style window that can continue across pages. rows: [{side, runs}]
   function idleWindow(rows, { title, shell, colour }) {
     const contentX = shell ? L + I_SIDE + 8 : L + I_PADX;
@@ -1097,31 +1180,33 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
     if (!wrapped.length) wrapped.push({ side: "", runs: [] });
     let i = 0, first = true;
     while (i < wrapped.length) {
-      const head = first && title ? I_TITLE : 0;
+      const head = first && title ? I_HEAD : 0;
       const padTop = first ? 6 : 4;
       const left = wrapped.length - i;
       const fit = Math.floor((BOTTOM - y - head - padTop - 7) / I_LH);
       if (fit < 1 || (fit < 3 && left > fit)) { newPage(); continue; }
-      const n = Math.min(fit, left), lastSeg = i + n >= wrapped.length;
+      let n = Math.min(fit, left);
+      if (left > n && left - n < 3 && left - 3 >= 3) n = left - 3; // don't carry one or two lines over on their own
+      const lastSeg = i + n >= wrapped.length;
       const bodyH = padTop + n * I_LH + (lastSeg ? 7 : 4);
       const segTop = y;
-      if (head) idleTitleBar(title, y);
+      if (head) { if (WINLOOK) winTitleBar(title, y, shell ? "shell" : "editor"); else idleTitleBar(title, y); }
       const bodyTop = y + head;
       doc.setFillColor("#FFFFFF"); doc.rect(L, bodyTop, W, bodyH, "F");
-      if (shell) { doc.setDrawColor(hex(IDLE.side)); doc.setLineWidth(1.3); doc.line(L + I_SIDE, bodyTop, L + I_SIDE, bodyTop + bodyH); }
+      if (shell) { doc.setDrawColor(hex(WINLOOK ? WINIDLE.side : IDLE.side)); doc.setLineWidth(WINLOOK ? 0.6 : 1.3); doc.line(L + I_SIDE, bodyTop, L + I_SIDE, bodyTop + bodyH); }
       for (let j = 0; j < n; j++) {
         const row = wrapped[i + j];
         const base = bodyTop + padTop + j * I_LH + I_LH * 0.72;
-        if (row.side) { doc.setFont(MONO, "normal"); doc.setFontSize(I_FS); doc.setTextColor(hex(IDLE.console)); doc.text(row.side, L + 5, base); }
+        if (row.side) { doc.setFont(I_FONT, "normal"); doc.setFontSize(I_FS); doc.setTextColor(hex(IDLE.console)); doc.text(row.side, L + 5, base); }
         let col = 0;
         row.runs.forEach(rn => {
           const c = colour && IDLE[rn.k] ? hex(IDLE[rn.k]) : "#000000";
-          doc.setFont(MONO, "normal"); doc.setFontSize(I_FS); doc.setTextColor(c);
-          doc.text(monoSafe(rn.t), contentX + col * I_CW, base);
+          doc.setFont(I_FONT, "normal"); doc.setFontSize(I_FS); doc.setTextColor(c);
+          doc.text(iSafe(rn.t), contentX + col * I_CW, base);
           col += rn.t.length;
         });
       }
-      doc.setDrawColor(hex(IDLE.frame)); doc.setLineWidth(0.6); doc.rect(L, segTop, W, head + bodyH, "S");
+      doc.setDrawColor(hex(WINLOOK ? WINIDLE.frame : IDLE.frame)); doc.setLineWidth(0.6); doc.rect(L, segTop, W, head + bodyH, "S");
       y = bodyTop + bodyH; i += n; first = false;
       if (i < wrapped.length) newPage();
     }
@@ -1168,7 +1253,7 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
     font("helvetica", "normal", 12, COL.ink);
     const qH = normalizeSrc(qText || "x").replace(/\s+$/, "").split("\n").reduce((sum, par) => sum + (par.trim() ? doc.splitTextToSize(pdfSafe(par), W).length : 1) * 12 * 1.32 + 2, 0);
     const codeN = Math.min(3, codeTokens(p.code, true).length);
-    const codeH = settings.look !== "simple" ? I_TITLE + 6 + codeN * I_LH + 7 : codeN * CODE_LH + 2 * PAD_Y;
+    const codeH = settings.look !== "simple" ? I_HEAD + 6 + codeN * I_LH + 7 : codeN * CODE_LH + 2 * PAD_Y;
     return 34 + 23 + qH + 23 + codeH;
   }
   programs.forEach((p, idx) => {
@@ -1184,7 +1269,7 @@ function buildPdf(jsPDFCtor, settings, programs, fontB64) {
     if (qText) textBlock(qText); else textBlock("(No question written)", { italic: true, color: COL.grey });
     const idle = settings.look !== "simple";
     label("Code");
-    if (idle) idleCode(p.code, `${progFile(p, idx)} (${pyVersion(settings)})`); else box(codeLines(p.code, settings.colour), "#F3F6F8");
+    if (idle) idleCode(p.code, editorTitle(settings, progFile(p, idx))); else box(codeLines(p.code, settings.colour), "#F3F6F8");
     label("Sample Input");
     if ((p.input || "").trim()) { if (idle) idleInput(p.input); else box(codeLines(p.input, false), "#FFFFFF"); }
     else textBlock("No input needed.", { italic: true, color: COL.muted });
@@ -1486,14 +1571,14 @@ function buildCard(p) {
   // IDLE editor window: a coloured layer sits under a transparent textarea, so typing stays a normal text box
   const codeHl = el("pre", { "aria-hidden": "true" });
   const codeTitle = el("span", { class: "win-title" });
-  const codeWin = el("div", { class: "win editor" }, [winBar(codeTitle), el("div", { class: "ed" }, [codeHl, code])]);
+  const codeWin = el("div", { class: "win editor" }, [winBar(codeTitle, "editor"), el("div", { class: "ed" }, [codeHl, code])]);
   const inWin = el("div", { class: "win input" }, [el("div", { class: "ed plain" }, [inp])]);
   // IDLE Shell window: prompt sidebar + output coloured by what was printed, typed, or an error
   const outHl = el("pre", { "aria-hidden": "true" });
   const side = el("pre", { class: "shell-side", "aria-hidden": "true" });
   const shellTitle = el("span", { class: "win-title" });
   const outEd = el("div", { class: "ed" }, [outHl, out]);
-  const outWin = el("div", { class: "win shell" }, [winBar(shellTitle), el("div", { class: "shell-body" }, [side, outEd])]);
+  const outWin = el("div", { class: "win shell" }, [winBar(shellTitle, "shell"), el("div", { class: "shell-body" }, [side, outEd])]);
   syncScroll(code, codeHl); syncScroll(out, outHl, side);
   const inHint = el("em");
   const runBtn = el("button", { type: "button", onclick: () => (p.running ? stopRun(p) : runProgram(p)) });
@@ -1534,7 +1619,15 @@ function buildCard(p) {
   paintCode(c); paintOut(c, p);
   return c;
 }
-function winBar(titleEl) { return el("div", { class: "win-bar", "aria-hidden": "true" }, [el("i"), el("i"), el("i"), titleEl]); }
+const WIN_ICON = `<img class="win-ico" alt="" src="data:image/png;base64,${PY_ICON_PNG}">`;
+const WIN_CTL = '<svg viewBox="0 0 42 30"><path d="M16 15.5h10"/></svg><svg viewBox="0 0 42 30"><rect x="16.5" y="10.5" width="9" height="9"/></svg><svg viewBox="0 0 42 30"><path d="M16.5 10.5l9 9M25.5 10.5l-9 9"/></svg>';
+/* Window frame top: Mac-style dark bar, or (Windows style) a white title bar with buttons and a menu bar below */
+function winBar(titleEl, kind) {
+  const ico = el("span"); ico.innerHTML = WIN_ICON;
+  const ctl = el("span", { class: "win-ctl" }); ctl.innerHTML = WIN_CTL;
+  const menu = el("div", { class: "win-menu" }, WIN_MENUS[kind].map(m => el("span", { text: m })));
+  return el("div", { class: "win-head", "aria-hidden": "true" }, [el("div", { class: "win-bar" }, [el("i"), el("i"), el("i"), ico.firstChild, titleEl, ctl]), menu]);
+}
 function syncScroll(ta, layer, side) {
   ta.addEventListener("scroll", () => { layer.scrollTop = ta.scrollTop; layer.scrollLeft = ta.scrollLeft; if (side) side.scrollTop = ta.scrollTop; }, { passive: true });
 }
@@ -1558,7 +1651,7 @@ function refreshCard(p) {
   c.num.textContent = String(n).padStart(2, "0");
   c.h.textContent = "Program " + n;
   const ver = pyVersion(state.settings);
-  c.codeTitle.textContent = `${fileNameOf(p, n - 1)} (${ver})`;
+  c.codeTitle.textContent = editorTitle(state.settings, fileNameOf(p, n - 1));
   c.shellTitle.textContent = `IDLE Shell ${ver}`;
   const st = statusOf(p);
   c.chip.className = "chip " + st.cls; c.chip.textContent = st.text;
@@ -1712,6 +1805,7 @@ function bindSetting(id, key, prop) {
 /* Keep the on-screen windows in step with the chosen export style */
 function refreshLook() {
   document.body.classList.toggle("look-simple", state.settings.look === "simple");
+  document.body.classList.toggle("look-windows", state.settings.look === "windows");
   document.body.classList.toggle("no-colour", !state.settings.colour);
   state.programs.forEach(refreshCard);
 }
@@ -1847,6 +1941,7 @@ function refreshPanel() {
   renderProgramList();
   $("ver-wrap").hidden = state.settings.look === "simple";
   $("pages").classList.toggle("idle", state.settings.look !== "simple");
+  $("pages").classList.toggle("win", state.settings.look === "windows");
   const strip = $("pages");
   const kids = [];
   if (state.settings.cover && ps.length) {
@@ -1954,7 +2049,7 @@ function feedbackContext() {
   const st = state.settings;
   return {
     ...deviceInfo(), version: APP_VERSION, page: location.host + location.pathname, programCount: state.programs.length, lastError,
-    settings: { look: st.look === "simple" ? "Simple boxes" : "IDLE windows", perPage: st.perPage === 2 ? "2 per page" : "1 per page",
+    settings: { look: st.look === "simple" ? "Simple boxes" : st.look === "windows" ? "IDLE (Windows style)" : "IDLE (Mac style)", perPage: st.perPage === 2 ? "2 per page" : "1 per page",
       cover: st.cover ? "cover on" : "cover off", colour: st.colour ? "colour on" : "colour off", pyver: "Python " + pyVersion(st) },
   };
 }

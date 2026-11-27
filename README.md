@@ -12,7 +12,7 @@ Turn your Python programs into a ready-to-submit practical file. Add your code, 
 - **Questions filled in automatically.** The comment or docstring at the top of each program becomes its question.
 - **Runs your code in the browser.** Sample output is produced by actually running the program with your sample input.
 - **Stop button.** Programs run in the background, so an endless loop never freezes the page. Press **Stop** to end a run at any time; anything already printed is kept.
-- **Python IDLE look, live.** While you edit, code appears in an IDLE editor window and output in an IDLE Shell window, using IDLE's own colours. What you see is what you download.
+- **Python IDLE look, live.** While you edit, code appears in an IDLE editor window and output in an IDLE Shell window, using IDLE's own colours. Choose **IDLE (Mac style)**, **IDLE (Windows style)** with the Windows title bar and menu bar, or **Simple boxes**. What you see is what you download.
 - **Word and PDF export.** Choose one program per page, or two per page to save paper. An optional cover page lists every program.
 - **Program list.** The sidebar lists every program with its status, so you can jump to any one.
 - **Saves as you go.** Your programs are kept in your browser between visits.
@@ -60,7 +60,7 @@ Each program has four sections. With **1 per page**, every program starts on a n
 | Section | Appearance |
 |---|---|
 | Question | Plain text |
-| Code | IDLE editor window with syntax colours |
+| Code | IDLE editor window with syntax colours (Mac or Windows style), or a plain box |
 | Sample Input | White box |
 | Sample Output | IDLE Shell window: output in blue, typed input in black, errors in red |
 
@@ -81,6 +81,7 @@ For these programs, run them on your computer and paste the output into **Sample
 - [JSZip](https://github.com/Stuk/jszip) to build `.docx` files
 - [jsPDF](https://github.com/parallax/jsPDF) to build PDF files
 - [DejaVu Sans Mono](https://dejavu-fonts.github.io) as the code font in PDFs
+- The Python logo in the Windows-style title bar comes from [devicon](https://github.com/devicons/devicon) (MIT). "Python" and the Python logos are trademarks of the [Python Software Foundation](https://www.python.org/psf/trademarks/).
 - A small [Vercel Function](https://vercel.com/docs/functions) (`api/feedback.js`) that forwards feedback to Telegram
 
 ## Repository contents
